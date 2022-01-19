@@ -1,0 +1,2 @@
+ultimaker https://peer23peer.jfrog.io/artifactory/api/conan/ultimaker-conan True
+conan-center https://center.conan.io True
