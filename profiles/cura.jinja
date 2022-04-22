@@ -5,7 +5,7 @@ include(default)
 [settings]
 os={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
 os_build={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
-compiler.cppstd=17
+compiler.cppstd=20
 {% if compiler == "gcc" %}
     compiler.libcxx=libstdc++11
 {% elif compiler == "apple-clang" %}
