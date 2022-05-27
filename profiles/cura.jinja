@@ -5,20 +5,15 @@ include(default)
 [settings]
 os={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
 os_build={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
-compiler.cppstd=20
-{% if compiler == "gcc" %}
-    compiler.libcxx=libstdc++11
-{% elif compiler == "apple-clang" %}
-    compiler.libcxx=libc++
-{% elif compiler == "Visual Studio" %}
-	compiler.toolset=v142
-{% endif %}
+compiler.cppstd=17
+{% if compiler == "gcc" %}compiler.libcxx=libstdc++11
+{% elif compiler == "apple-clang" %}compiler.libcxx=libc++
+{% elif compiler == "Visual Studio" %}compiler.toolset=v142{% endif %}
 [options]
 
 [env]
 
 [conf]
 tools.cmake.cmaketoolchain:find_package_prefer_config=True
-{% if compiler == "Visual Studio" %}
-	tools.microsoft.msbuild:vs_version=compiler.version
-{% endif %}
+{% if os_build == Windows %}tools.env.virtualenv:powershell=True{% endif %}
+{% if compiler == "Visual Studio" %}tools.microsoft.msbuild:vs_version=compiler.version{% endif %}
