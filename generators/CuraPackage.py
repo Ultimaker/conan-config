@@ -55,6 +55,96 @@ initialize_paths()
 
 """)
 
+    _package_py = Template(r"""import os
+import argparse
+import shutil
+import sys
+import zipfile
+
+from pathlib import Path
+
+from conans.util.files import mkdir, sha256sum
+
+FILTERED_DIRS = ["deps", "__pycache__"]
+
+
+def configure(source_dir, build_dir):
+    dest_dir = Path(build_dir, r"{{ files_dir }}")
+    for root, dirs, files in os.walk(os.path.normpath(source_dir)):
+        root_path = Path(root)
+        rel_path = root_path.relative_to(source_dir)
+        if rel_path in FILTERED_DIRS or any([rel_path.is_relative_to(d) for d in FILTERED_DIRS]):
+            continue
+
+        files += [d for d in dirs if os.path.islink(os.path.join(root, d))]
+
+        for f in files:
+            src = Path(root, f)
+            dst = Path(dest_dir, rel_path, f)
+            mkdir(os.path.dirname(dst))
+            if os.path.islink(src):
+                link_target = os.readlink(src)
+                if not os.path.isabs(link_target):
+                    link_target = os.path.join(os.path.dirname(src), link_target)
+                linkto = os.path.relpath(link_target, os.path.dirname(src))
+                if os.path.isfile(dst) or os.path.islink(dst):
+                    os.unlink(dst)
+                os.symlink(linkto, dst)
+            else:
+                if dst.exists():
+                    if sha256sum(dst) == sha256sum(src):
+                        continue
+                shutil.copy(src, dst)
+
+
+def build(build_dir):
+    src_dir = Path(build_dir, "curapackage")
+    dst_file = Path(build_dir, "{{ package_id }}.curapackage")
+
+    with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_LZMA) as curapackage:
+        for root, dirs, files in os.walk(os.path.normpath(src_dir)):
+            root_path = Path(root)
+            rel_path = root_path.relative_to(src_dir)
+            files += [d for d in dirs if os.path.islink(os.path.join(root, d))]
+
+            for f in files:
+                curapackage.write(root_path.joinpath(f), arcname = rel_path.joinpath(f))
+
+
+def deploy(deploy_dir):
+    # TODO: Create the zipfolder which is to be uploaded to Marketplace 
+    pass
+
+
+def main():
+    parser = argparse.ArgumentParser(description = "Create, and/or deploy a curapackage")
+    parser.add_argument("--configure", action = "store_true")
+    parser.add_argument("--build", action = "store_true")
+    parser.add_argument("--deploy", action = "store_true")
+    parser.add_argument("-S", type = str, default = r"{{ source_directory }}", help = "Source Path")
+    parser.add_argument("-B", type = str, default = r"{{ build_directory }}", help = "Build path")
+    parser.add_argument("-D", type = str, default = r"{{ build_directory }}", help = "Deploy path")
+    args = parser.parse_args(sys.argv[1:])
+
+    if not args.configure and not args.build and not args.deploy:
+        parser.print_help()
+        sys.exit(-1)
+
+    if args.configure:
+        configure(args.S, args.B)
+
+    if args.build:
+        build(args.B)
+
+    if args.deploy:
+        deploy(args.D)
+
+
+if __name__ == "__main__":
+    main()
+
+    """)
+
     def subdict(self, base, *keys, **kwargs):
         sub = dict(zip(keys, [base[k] for k in keys]))
         for k, v in kwargs.items():
@@ -165,13 +255,20 @@ initialize_paths()
                                               "api_version",
                                               "supported_sdk_versions"))
 
-        deps_init_py = self._deps_init_py.render(py_deps = site_packages, bin_deps = bin_dirs)
+        deps_init_py = self._deps_init_py.render(py_deps = site_packages,
+                                                 bin_deps = bin_dirs)
+
+        package_py = self._package_py.render(source_directory = self.conanfile.source_folder,
+                                             build_directory = self.conanfile.build_folder,
+                                             package_id = self.conanfile.curaplugin["package_id"],
+                                             files_dir = str(self._curapackage_files_path.relative_to(self._curapackage_path)))
 
         return {
-            str(Path(self._curapackage_path, "[Content_Types].xml")): self._content_types_xml,
-            str(Path(self._curapackage_path, "package.json")): package_json,
-            str(Path(self._curapackage_path, "_rels", ".rels")): self._dot_rels,
-            str(Path(self._curapackage_path, "_rels", "package.json.rels")): self._package_json_rels,
-            str(Path(self._curapackage_files_path, "plugin.json")): plugin_json,
-            str(Path(self._curapackage_deps_path, "__init__.py")): deps_init_py
+            str(self._curapackage_path.joinpath("[Content_Types].xml")): self._content_types_xml,
+            str(self._curapackage_path.joinpath("package.json")): package_json,
+            str(self._curapackage_path.joinpath("_rels", ".rels")): self._dot_rels,
+            str(self._curapackage_path.joinpath("_rels", "package.json.rels")): self._package_json_rels,
+            str(self._curapackage_files_path.joinpath("plugin.json")): plugin_json,
+            str(self._curapackage_deps_path.joinpath("__init__.py")): deps_init_py,
+            str(Path(self.conanfile.generators_folder, "package.py")): package_py
         }
