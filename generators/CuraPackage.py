@@ -247,7 +247,7 @@ if __name__ == "__main__":
                                          display_name = "author_display_name",
                                          email = "author_email",
                                          website = "author_website")
-        package_json = json.dumps(package)
+        package_json = json.dumps(package, indent = 4, sort_keys = True)
 
         package_json_rels = self._package_json_rels.render(package_type = self.conanfile._curaplugin["package_type"])
 
@@ -257,7 +257,7 @@ if __name__ == "__main__":
                                               version = "package_version",
                                               api = "api_version",
                                               name = "display_name",
-                                              author = "author_display_name"))
+                                              author = "author_display_name"), indent = 4, sort_keys = True)
 
         deps_init_py = self._deps_init_py.render(py_deps = site_packages,
                                                  bin_deps = bin_dirs)
