@@ -100,7 +100,7 @@ def configure(source_dir, build_dir):
 
 def build(build_dir, compresslevel):
     src_dir = Path(build_dir, "curapackage")
-    dst_file = Path(build_dir, "{{ package_id }}.curapackage")
+    dst_file = Path(build_dir, "{{ package_id }}-v{{ sdk_version_semver }}.curapackage")
 
     with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_DEFLATED, compresslevel = compresslevel) as curapackage:
         for root, dirs, files in os.walk(os.path.normpath(src_dir)):
@@ -262,7 +262,8 @@ if __name__ == "__main__":
         package_py = self._package_py.render(source_directory = self.conanfile.source_folder,
                                              build_directory = self.conanfile.build_folder,
                                              package_id = self.conanfile._curaplugin["package_id"],
-                                             files_dir = str(self._curapackage_files_path.relative_to(self._curapackage_path)))
+                                             files_dir = str(self._curapackage_files_path.relative_to(self._curapackage_path)),
+                                             sdk_version_semver = self.conanfile._curaplugin["sdk_version_semver"])
 
         return {
             str(self._curapackage_path.joinpath("[Content_Types].xml")): self._content_types_xml,
