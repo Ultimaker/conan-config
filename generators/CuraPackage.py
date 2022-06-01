@@ -167,7 +167,6 @@ if __name__ == "__main__":
         return Path(self._curapackage_path,
                     "files",
                     f"{self.conanfile._curaplugin['package_type']}s",
-                    self.conanfile._curaplugin['package_id'],
                     self.conanfile._curaplugin['package_id'])
 
     @property
