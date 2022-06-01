@@ -97,11 +97,11 @@ def configure(source_dir, build_dir):
                 shutil.copy(src, dst)
 
 
-def build(build_dir):
+def build(build_dir, compresslevel):
     src_dir = Path(build_dir, "curapackage")
     dst_file = Path(build_dir, "{{ package_id }}.curapackage")
 
-    with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_LZMA) as curapackage:
+    with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_DEFLATED, compresslevel = compresslevel) as curapackage:
         for root, dirs, files in os.walk(os.path.normpath(src_dir)):
             root_path = Path(root)
             rel_path = root_path.relative_to(src_dir)
@@ -121,6 +121,7 @@ def main():
     parser.add_argument("--configure", action = "store_true")
     parser.add_argument("--build", action = "store_true")
     parser.add_argument("--deploy", action = "store_true")
+    parser.add_argument("--compresslevel", type = int, default = 9)
     parser.add_argument("-S", type = str, default = r"{{ source_directory }}", help = "Source Path")
     parser.add_argument("-B", type = str, default = r"{{ build_directory }}", help = "Build path")
     parser.add_argument("-D", type = str, default = r"{{ build_directory }}", help = "Deploy path")
@@ -134,7 +135,7 @@ def main():
         configure(args.S, args.B)
 
     if args.build:
-        build(args.B)
+        build(args.B, args.compresslevel)
 
     if args.deploy:
         deploy(args.D)
