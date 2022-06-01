@@ -19,13 +19,14 @@ FILTERED_DIRS = ["include"]
 class CuraPackage(Generator):
     _content_types_xml = r"""<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default ContentType="application/vnd.openxmlformats-package.relationships+xml" Extension="rels" />
-  <Default ContentType="application/x-ultimaker-material-profile" Extension="xml.fdm_material" />
-  <Default ContentType="application/x-ultimaker-material-sig" Extension="xml.fdm_material.sig" />
-  <Default ContentType="application/x-ultimaker-quality-profile" Extension="inst.cfg" />
-  <Default ContentType="application/x-ultimaker-machine-definition" Extension="def.json" />
-  <Default ContentType="text/json" Extension="json" />
-</Types>"""
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
+  <Default Extension="xml.fdm_material" ContentType="application/x-ultimaker-material-profile" />
+  <Default Extension="xml.fdm_material.sig" ContentType="application/x-ultimaker-material-sig" />
+  <Default Extension="inst.cfg" ContentType="application/x-ultimaker-quality-profile" />
+  <Default Extension="def.json" ContentType="application/x-ultimaker-machine-definition" />
+  <Default Extension="json" ContentType="text/json" />
+</Types>
+"""
 
     _dot_rels = r"""<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
