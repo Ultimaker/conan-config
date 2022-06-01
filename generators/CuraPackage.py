@@ -260,7 +260,7 @@ if __name__ == "__main__":
 
         package_py = self._package_py.render(source_directory = self.conanfile.source_folder,
                                              build_directory = self.conanfile.build_folder,
-                                             package_id = self.conanfile.curaplugin["package_id"],
+                                             package_id = self.conanfile._curaplugin["package_id"],
                                              files_dir = str(self._curapackage_files_path.relative_to(self._curapackage_path)))
 
         return {
