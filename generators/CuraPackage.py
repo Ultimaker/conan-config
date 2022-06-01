@@ -69,7 +69,7 @@ FILTERED_DIRS = ["deps", "__pycache__"]
 
 
 def configure(source_dir, build_dir):
-    dest_dir = Path(build_dir, r"{{ files_dir }}")
+    dest_dir = Path(build_dir, "curapackage" ,r"{{ files_dir }}")
     for root, dirs, files in os.walk(os.path.normpath(source_dir)):
         root_path = Path(root)
         rel_path = root_path.relative_to(source_dir)
