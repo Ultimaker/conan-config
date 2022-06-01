@@ -39,17 +39,22 @@ class CuraPackage(Generator):
 </Relationships>""")
 
     _deps_init_py = Template(r"""def initialize_paths():
+    from UM.Logger import Logger
+    Logger.info("Initializing the correct paths for {{ package_id }}")
+    
     {% if py_deps | length > 0 or bin_deps | length > 0 %}from pathlib import Path
     {% if bin_deps | length > 0 %}from platform import system{% endif %}
     {% if py_deps | length > 0 %}from sys import path
     import sysconfig
 
     platform_path = f"python{sysconfig.get_config_var('VERSION')}_{sysconfig.get_platform().replace('-', '_')}"{% endif %}  
-    {% if py_deps | length > 0 %}{% for dep in py_deps %}path.append(str(Path(__file__).parent.parent.joinpath(r"{{ dep }}", platform_path))){% endfor %}{% endif %}
+    {% if py_deps | length > 0 %}{% for dep in py_deps %}Logger.debug("Adding to PYTHONPATH: {}".format(str(Path(__file__).parent.parent.joinpath(r'{{ dep }}', platform_path))))
+    path.append(str(Path(__file__).parent.parent.joinpath(r"{{ dep }}", platform_path))){% endfor %}{% endif %}
 
     {% if bin_deps | length > 0 %}if system() == "Windows":
         from os import add_dll_directory
-        {% for dep in bin_deps %}add_dll_directory(str(Path(__file__).parent.joinpath(r"{{ dep }}")))
+        {% for dep in bin_deps %}Logger.debug("Adding to PATH: {}".format(str(Path(__file__).parent.joinpath(r'{{ dep }}'))))
+        add_dll_directory(str(Path(__file__).parent.joinpath(r"{{ dep }}")))
         {% endfor %}{% endif %}{%  else %}pass{% endif %}
 
 initialize_paths()
@@ -260,7 +265,8 @@ if __name__ == "__main__":
                                               author = "author_display_name"), indent = 4, sort_keys = True)
 
         deps_init_py = self._deps_init_py.render(py_deps = site_packages,
-                                                 bin_deps = bin_dirs)
+                                                 bin_deps = bin_dirs,
+                                                 package_id = self.conanfile._curaplugin["package_id"])
 
         package_py = self._package_py.render(source_directory = self.conanfile.source_folder,
                                              build_directory = self.conanfile.build_folder,
