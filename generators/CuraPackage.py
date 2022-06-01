@@ -233,28 +233,27 @@ if __name__ == "__main__":
 
         # return the generated content
         package = self.subdict(self.conanfile._curaplugin,
-                               "description",
                                "display_name",
                                "package_id",
                                "package_type",
                                "package_version",
                                "sdk_version",
                                "sdk_version_semver",
-                               "author_website")
+                               description = "package_description",
+                               website = "author_website")
         package["author"] = self.subdict(self.conanfile._curaplugin,
                                          "author_id",
                                          display_name = "author_display_name",
                                          email = "author_email",
-                                         website = "author_website"
-                                         )
+                                         website = "author_website")
         package_json = json.dumps(package)
         plugin_json = json.dumps(self.subdict(self.conanfile._curaplugin,
-                                              "display_name",
-                                              "author_display_name",
-                                              "package_version",
                                               "description",
-                                              "api_version",
-                                              "supported_sdk_versions"))
+                                              "supported_sdk_versions",
+                                              version = "package_version",
+                                              api = "api_version",
+                                              name = "display_name",
+                                              author = "author_display_name"))
 
         deps_init_py = self._deps_init_py.render(py_deps = site_packages,
                                                  bin_deps = bin_dirs)
