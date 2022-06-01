@@ -33,10 +33,10 @@ class CuraPackage(Generator):
   <Relationship Target="/package.json" Type="http://schemas.ultimaker.org/package/2018/relationships/opc_metadata" Id="rel0" />
 </Relationships>"""
 
-    _package_json_rels = r"""<?xml version="1.0" encoding="UTF-8"?>
+    _package_json_rels = Template(r"""<?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Target="/plugins" Type="plugin" Id="rel0" />
-</Relationships>"""
+  <Relationship Target="/files/{{ package_type }}s" Type="{{ package_type }}" Id="rel0" />
+</Relationships>""")
 
     _deps_init_py = Template(r"""def initialize_paths():
     {% if py_deps | length > 0 or bin_deps | length > 0 %}from pathlib import Path
@@ -248,6 +248,9 @@ if __name__ == "__main__":
                                          email = "author_email",
                                          website = "author_website")
         package_json = json.dumps(package)
+
+        package_json_rels = self._package_json_rels.render(package_type = self.conanfile._curaplugin["package_type"])
+
         plugin_json = json.dumps(self.subdict(self.conanfile._curaplugin,
                                               "description",
                                               "supported_sdk_versions",
@@ -269,7 +272,7 @@ if __name__ == "__main__":
             str(self._curapackage_path.joinpath("[Content_Types].xml")): self._content_types_xml,
             str(self._curapackage_path.joinpath("package.json")): package_json,
             str(self._curapackage_path.joinpath("_rels", ".rels")): self._dot_rels,
-            str(self._curapackage_path.joinpath("_rels", "package.json.rels")): self._package_json_rels,
+            str(self._curapackage_path.joinpath("_rels", "package.json.rels")): package_json_rels,
             str(self._curapackage_files_path.joinpath("plugin.json")): plugin_json,
             str(self._curapackage_deps_path.joinpath("__init__.py")): deps_init_py,
             str(Path(self.conanfile.generators_folder, "package.py")): package_py
