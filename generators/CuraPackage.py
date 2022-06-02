@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import sysconfig
+import hashlib
 
 from pathlib import Path
 
@@ -186,7 +187,11 @@ if __name__ == "__main__":
         site_packages = set()
         bin_dirs = set()
 
+        central_storage = []
+
         for dep_name in self.conanfile.deps_cpp_info.deps:
+            calc_hash = dep_name in self.conanfile._curaplugin["deps"] and "central_storage" in self.conanfile._curaplugin["deps"][dep_name] and self.conanfile._curaplugin["deps"][dep_name]["central_storage"]
+            hash_files = {}
             rootpath = self.conanfile.deps_cpp_info[dep_name].rootpath
 
             # Determine the relative paths for the binaries, used in the import deps __init__.py
@@ -228,11 +233,25 @@ if __name__ == "__main__":
                         if os.path.isfile(dst) or os.path.islink(dst):
                             os.unlink(dst)
                         os.symlink(linkto, dst)
+                        if calc_hash:
+                            hash_files[rel_path] = sha256sum(linkto)
                     else:
                         if dst.exists():
-                            if sha256sum(dst) == sha256sum(src):
+                            src_hash = sha256sum(src)
+                            if sha256sum(dst) == src_hash:
+                                if calc_hash:
+                                    hash_files[rel_path] = src_hash
                                 continue
+                        if calc_hash:
+                            hash_files[rel_path] = src_hash if dst.exists() else sha256sum(src)
                         shutil.copy(src, dst)
+            if calc_hash:
+                sorted_hash_paths = sorted(hash_files.keys())
+                hasher = hashlib.sha256()
+                for hash_path in sorted_hash_paths:
+                    hasher.update("".join((str(hash_path), hash_files[hash_path])).encode('utf-8'))
+                dep_version = Version(self.conanfile.deps_cpp_info[dep_name].version)
+                central_storage.append([os.path.join("deps", dep_name), dep_name, f"{dep_version.major}.{dep_version.minor}.{dep_version.patch}", hasher.hexdigest()])
 
         bin_dirs = {bin_dir for bin_dir in bin_dirs if Path(self._curapackage_deps_path, bin_dir).exists()}
 
@@ -273,7 +292,7 @@ if __name__ == "__main__":
                                              files_dir = str(self._curapackage_files_path.relative_to(self._curapackage_path)),
                                              sdk_version_semver = self.conanfile._curaplugin["sdk_version_semver"])
 
-        return {
+        content = {
             str(self._curapackage_path.joinpath("[Content_Types].xml")): self._content_types_xml,
             str(self._curapackage_path.joinpath("package.json")): package_json,
             str(self._curapackage_path.joinpath("_rels", ".rels")): self._dot_rels,
@@ -282,3 +301,9 @@ if __name__ == "__main__":
             str(self._curapackage_deps_path.joinpath("__init__.py")): deps_init_py,
             str(Path(self.conanfile.generators_folder, "package.py")): package_py
         }
+
+        if len(central_storage) > 0:
+            central_storage_json = json.dumps(central_storage, indent = 4, sort_keys = True)
+            content[str(self._curapackage_files_path.joinpath("central_storage.json"))] = central_storage_json
+
+        return content
