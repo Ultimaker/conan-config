@@ -43,20 +43,43 @@ class CuraPackage(Generator):
     from UM.Logger import Logger
     Logger.info("Initializing the correct paths for {{ package_id }}")
     
-    {% if py_deps | length > 0 or bin_deps | length > 0 %}from pathlib import Path
-    {% if bin_deps | length > 0 %}from platform import system{% endif %}
-    {% if py_deps | length > 0 %}from sys import path
+    from pathlib import Path
+    from platform import system
+    from sys import path
     import sysconfig
+    
+    file_manifest = None
+    {% if central_storage %}# Read the Central Storage manifest
+    from UM.CentralFileStorage import CentralFileStorage
+    import json
+    central_storage_file = Path(__file__).parent.parent.joinpath("central_storage.json")
+    if central_storage_file.exists():
+        with open(central_storage_file, "r", encoding = "utf-8") as file_stream:
+            file_manifest = json.loads(file_stream.read())
+    {% endif %}
+       
+    # Set the base path for each dependency
+    central_storage_deps = [d[1] for d in file_manifest]
+    {% for dep in deps.keys() %}if file_manifest and "{{ dep }}" in central_storage_deps:
+        dep_idx = central_storage_deps.index("{{ dep }}")
+        {{ dep }}_base_path = Path(CentralFileStorage.retrieve(path_id = file_manifest[dep_idx][1], sha256_hash = file_manifest[dep_idx][3], version = file_manifest[dep_idx][2]))
+    else:
+        {{ dep }}_base_path = Path(__file__).parent.parent.joinpath("deps", r"{{ dep }}")
+    {% endfor %}
 
-    platform_path = f"python{sysconfig.get_config_var('VERSION')}_{sysconfig.get_platform().replace('-', '_')}"{% endif %}  
-    {% if py_deps | length > 0 %}{% for dep in py_deps %}Logger.debug("Adding to PYTHONPATH: {}".format(str(Path(__file__).parent.parent.joinpath(r'{{ dep }}', platform_path))))
-    path.append(str(Path(__file__).parent.parent.joinpath(r"{{ dep }}", platform_path))){% endfor %}{% endif %}
+    # Set the platform and python specific path
+    platform_path = f"python{sysconfig.get_config_var('VERSION')}_{sysconfig.get_platform().replace('-', '_')}"
 
-    {% if bin_deps | length > 0 %}if system() == "Windows":
+    # Set the PYTHONPATH
+    {% for dep in deps.keys() %}{% if deps[dep]["pythonpaths"] | length > 0 %}{% for p in deps[dep]["pythonpaths"] %}path.append(str({{ dep }}_base_path.joinpath("site-packages", platform_path)))
+    {% endfor %}{% endif %}{% endfor %}
+    
+    # Set the PATH
+    if system() == "Windows":
         from os import add_dll_directory
-        {% for dep in bin_deps %}Logger.debug("Adding to PATH: {}".format(str(Path(__file__).parent.joinpath(r'{{ dep }}'))))
-        add_dll_directory(str(Path(__file__).parent.joinpath(r"{{ dep }}")))
-        {% endfor %}{% endif %}{%  else %}pass{% endif %}
+    {% for dep in deps.keys() %}{% if deps[dep]["binpaths"] | length > 0 %}if system() == "Windows":
+        {% for p in deps[dep]["binpaths"] %}add_dll_directory(str({{ dep }}_base_path.joinpath(r"{{ p }}")))
+    {% endfor %}{% endif %}{% endfor %}
 
 initialize_paths()
 
@@ -184,12 +207,13 @@ if __name__ == "__main__":
             raise ConanInvalidConfiguration()
 
         #  Copy dependencies
-        site_packages = set()
-        bin_dirs = set()
+        deps = {}
 
         central_storage = []
 
         for dep_name in self.conanfile.deps_cpp_info.deps:
+            deps[dep_name] = {"binpaths": set(),
+                              "pythonpaths": set()}
             calc_hash = dep_name in self.conanfile._curaplugin["deps"] and "central_storage" in self.conanfile._curaplugin["deps"][dep_name] and self.conanfile._curaplugin["deps"][dep_name]["central_storage"]
             hash_files = {}
             rootpath = self.conanfile.deps_cpp_info[dep_name].rootpath
@@ -198,9 +222,9 @@ if __name__ == "__main__":
             for bin_dir in self.conanfile.deps_cpp_info[dep_name].bindirs:
                 bin_path = Path(bin_dir)
                 if bin_path.is_absolute():
-                    bin_dirs.add(Path(dep_name, bin_path.relative_to(rootpath)))
+                    deps[dep_name]["binpaths"].add(Path(dep_name, bin_path.relative_to(rootpath)))
                 else:
-                    bin_dirs.add(Path(dep_name, bin_path))
+                    deps[dep_name]["binpaths"].add(Path(dep_name, bin_path))
 
             # Copy/link the files
             for root, dirs, files in os.walk(os.path.normpath(rootpath)):
@@ -218,7 +242,7 @@ if __name__ == "__main__":
                         py_version = Version(self.conanfile.options.python_version)
                         # FIXME: for different architectures and OSes
                         base_dst = Path(self._curapackage_deps_path, dep_name, os.path.relpath(root, rootpath))
-                        site_packages.add(base_dst.relative_to(self._curapackage_files_path))
+                        deps[dep_name]["pythonpaths"].add(base_dst.relative_to(self._curapackage_files_path))
                         dst = os.path.join(base_dst,
                                            f"python{py_version.major}{py_version.minor}_{sysconfig.get_platform().replace('-', '_')}", f)
                     else:
@@ -253,7 +277,8 @@ if __name__ == "__main__":
                 dep_version = Version(self.conanfile.deps_cpp_info[dep_name].version)
                 central_storage.append([os.path.join("deps", dep_name), dep_name, f"{dep_version.major}.{dep_version.minor}.{dep_version.patch}", hasher.hexdigest()])
 
-        bin_dirs = {bin_dir for bin_dir in bin_dirs if Path(self._curapackage_deps_path, bin_dir).exists()}
+
+            deps[dep_name]["binpaths"] = {bin_dir.relative_to(dep_name) for bin_dir in deps[dep_name]["binpaths"] if Path(self._curapackage_deps_path, bin_dir).exists()}
 
         # return the generated content
         package = self.subdict(self.conanfile._curaplugin,
@@ -282,8 +307,8 @@ if __name__ == "__main__":
                                               name = "display_name",
                                               author = "author_display_name"), indent = 4, sort_keys = True)
 
-        deps_init_py = self._deps_init_py.render(py_deps = site_packages,
-                                                 bin_deps = bin_dirs,
+        deps_init_py = self._deps_init_py.render(deps = deps,
+                                                 central_storage = len(central_storage) > 0,
                                                  package_id = self.conanfile._curaplugin["package_id"])
 
         package_py = self._package_py.render(source_directory = self.conanfile.source_folder,
