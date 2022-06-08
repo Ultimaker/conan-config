@@ -76,9 +76,12 @@ class CuraPackage(Generator):
     
     # Set the PATH
     if system() == "Windows":
-        from os import add_dll_directory
-    {% for dep in deps.keys() %}{% if deps[dep]["binpaths"] | length > 0 %}if system() == "Windows":
-        {% for p in deps[dep]["binpaths"] %}add_dll_directory(str({{ dep }}_base_path.joinpath(r"{{ p }}")))
+        import os
+    {% for dep in deps.keys() %}{% if deps[dep]["binpaths"] | length > 0 %}
+    {% for p in deps[dep]["binpaths"] %}
+        path_str = str({{ dep }}_base_path.joinpath(r"{{ p }}"))
+        os.add_dll_directory(path_str)
+        os.environ["PATH"] += f";{path_str}"
     {% endfor %}{% endif %}{% endfor %}
 
 initialize_paths()
