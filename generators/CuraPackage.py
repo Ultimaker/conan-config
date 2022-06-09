@@ -143,7 +143,7 @@ def deploy(deploy_dir, compresslevel):
 
 
 def _compress(src_dir, dst_file, compresslevel):
-    with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_DEFLATED, compresslevel = compresslevel) as curapackage:
+    with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_LZMA, compresslevel = compresslevel) as curapackage:
         for root, dirs, files in os.walk(os.path.normpath(src_dir)):
             root_path = Path(root)
             rel_path = root_path.relative_to(src_dir)
