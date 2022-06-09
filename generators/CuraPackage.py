@@ -133,7 +133,16 @@ def configure(source_dir, build_dir):
 def build(build_dir, compresslevel):
     src_dir = Path(build_dir, "curapackage")
     dst_file = Path(build_dir, "{{ package_id }}-v{{ sdk_version_semver }}.curapackage")
+    _compress(src_dir, dst_file, compresslevel)
 
+
+def deploy(deploy_dir, compresslevel):
+    src_dir = Path(deploy_dir, "curapackage/files")
+    dst_file = Path(deploy_dir, "{{ package_id }}.zip")
+    _compress(src_dir, dst_file, compresslevel)
+
+
+def _compress(src_dir, dst_file, compresslevel):
     with zipfile.ZipFile(dst_file, "w", compression = zipfile.ZIP_DEFLATED, compresslevel = compresslevel) as curapackage:
         for root, dirs, files in os.walk(os.path.normpath(src_dir)):
             root_path = Path(root)
@@ -142,11 +151,6 @@ def build(build_dir, compresslevel):
 
             for f in files:
                 curapackage.write(root_path.joinpath(f), arcname = rel_path.joinpath(f))
-
-
-def deploy(deploy_dir):
-    # TODO: Create the zipfolder which is to be uploaded to Marketplace 
-    pass
 
 
 def main():
@@ -171,7 +175,7 @@ def main():
         build(args.B, args.compresslevel)
 
     if args.deploy:
-        deploy(args.D)
+        deploy(args.D, args.compresslevel)
 
 
 if __name__ == "__main__":
