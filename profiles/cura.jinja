@@ -15,5 +15,5 @@ compiler.cppstd=17
 
 [conf]
 tools.cmake.cmaketoolchain:find_package_prefer_config=True
-{% if os_build == Windows %}tools.env.virtualenv:powershell=True{% endif %}
+{% if os_build != "Windows" %}{% else %}tools.env.virtualenv:powershell=True{% endif %}
 {% if compiler == "Visual Studio" %}tools.microsoft.msbuild:vs_version=compiler.version{% endif %}
