@@ -2,6 +2,4 @@ include(cura.jinja)
 
 [settings]
 build_type=Debug
-{% if compiler == "Visual Studio" %}
-    compiler.runtime=MDd
-{% endif %}
+{% if compiler == 'Visual Studio' %}compiler.runtime=MDd{% endif %}
