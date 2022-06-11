@@ -54,7 +54,7 @@ class VirtualPythonEnv(Generator):
 
         # When on Windows execute as Windows Path
         if self.conanfile.settings.os == "Windows":
-            python_interpreter = Path(*[f"'{p}'" if " " in p else p for p in python_interpreter.parts])
+            python_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_interpreter.parts])
 
         # Create the virtual environment
         self.conanfile.run(f"""{python_interpreter} -m venv {self.conanfile.folders.build}""", env = "conanrun")
@@ -65,7 +65,7 @@ class VirtualPythonEnv(Generator):
         if not python_venv_interpreter.exists():
             raise ConanException(f"Virtual environment Python interpreter not found at: {python_venv_interpreter}")
         if self.conanfile.settings.os == "Windows":
-            python_venv_interpreter = Path(*[f"'{p}'" if " " in p else p for p in python_venv_interpreter.parts])
+            python_venv_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_venv_interpreter.parts])
 
         buffer = StringIO()
         self.conanfile.run(f"""{python_venv_interpreter} -c "import sysconfig; print(sysconfig.get_path('purelib'))""""", env = "conanrun",
