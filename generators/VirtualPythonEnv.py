@@ -138,5 +138,5 @@ class VirtualPythonEnv(Generator):
             str(Path(self.conanfile.build_folder, self._venv_path, "deactivate.bat.jinja")): deactivate_bat,
             str(Path(self.conanfile.build_folder, self._venv_path, "Activate.ps1")): activate_ps1,
             str(Path(self.conanfile.build_folder, self._venv_path, "activate")): activate_sh,
-            str(Path(self.conanfile.build_folder, self._venv_path, f"activate_github_actions_buildenv{self._script_ext}")): activate_github_actions_buildenv
+            str(Path(self.conanfile.build_folder, self._venv_path, f"activate_github_actions_env{self._script_ext}")): activate_github_actions_buildenv
         }
