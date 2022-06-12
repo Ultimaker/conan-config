@@ -23,13 +23,7 @@ class VirtualPythonEnv(Generator):
 
     @property
     def filename(self):
-        filepath = str(Path(self.conanfile.generators_folder).joinpath("activate"))
-        if self.conanfile.settings.get_safe("os") == "Windows":
-            if self.conanfile.conf.get("tools.env.virtualenv:powershell", check_type = bool):
-                filepath += ".ps1"
-            else:
-                filepath += ".bat"
-        return filepath
+        pass
 
     @property
     def content(self):
@@ -79,7 +73,6 @@ class VirtualPythonEnv(Generator):
         env.prepend_path("PATH", os.path.join(self.conanfile.build_folder, self._venv_path))
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
-        env.define("PS1", f"({self.conanfile.name}) ${{PS1:-}}")
 
         envvars = env.vars(self.conanfile, scope = "run")
 
@@ -116,14 +109,21 @@ class VirtualPythonEnv(Generator):
                 self.conanfile.output.warn(f"Failed to find pip requirement file: {requirements_txt_path}")
 
         # Generate the Python Virtual Environment Script
-        template = Template("""\
-deactivate()
-{
-{% for k, v in envvars.items() %}export {{ k }}=$OLD_{{ k }}
-unset OLD_{{ k }}
-{% endfor %}}
+        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate.bat.jinja"), "r") as f:
+            activate_bat = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
 
-{% for k, v in envvars.items() %}export OLD_{{ k }}=${{ k }}
-export {{ k }}={{ v }}
-{% endfor %}""")
-        return template.render(envvars = envvars)
+        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "deactivate.bat.jinja"), "r") as f:
+            deactivate_bat = Template(f.read()).render(envvars = envvars)
+
+        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "Activate.ps1.jinja"), "r") as f:
+            activate_ps1 = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
+
+        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate.jinja"), "r") as f:
+            activate_sh = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
+
+        return {
+            str(Path(self.conanfile.build_folder, self._venv_path, "activate.bat")): activate_bat,
+            str(Path(self.conanfile.build_folder, self._venv_path, "deactivate.bat.jinja")): deactivate_bat,
+            str(Path(self.conanfile.build_folder, self._venv_path, "Activate.ps1")): activate_ps1,
+            str(Path(self.conanfile.build_folder, self._venv_path, "activate")): activate_sh
+        }

@@ -1,0 +1,77 @@
+<#
+.Synopsis
+Activate a Python virtual environment for the current PowerShell session.
+
+.Notes
+On Windows, it may be required to enable this Activate.ps1 script by setting the
+execution policy for the user. You can do this by issuing the following PowerShell
+command:
+
+PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+For more information on Execution Policies: 
+https://go.microsoft.com/fwlink/?LinkID=135170
+
+#>
+
+<#
+.Synopsis
+Remove all shell session elements added by the Activate script, including the
+addition of the virtual environment's Python executable from the beginning of
+the PATH variable.
+
+.Parameter NonDestructive
+If present, do not remove this function from the global namespace for the
+session.
+
+#>
+function global:deactivate ([switch]$NonDestructive) {
+    # Revert to original values
+
+    # The prior prompt:
+    if (Test-Path -Path Function:_OLD_VIRTUAL_PROMPT) {
+        Copy-Item -Path Function:_OLD_VIRTUAL_PROMPT -Destination Function:prompt
+        Remove-Item -Path Function:_OLD_VIRTUAL_PROMPT
+    }
+
+    if (Test-Path -Path Env:VIRTUAL_ENV_PROMPT) {
+        Remove-Item -Path env:VIRTUAL_ENV_PROMPT
+    }
+
+    # Just remove the _PYTHON_VENV_PROMPT_PREFIX altogether:
+    if (Get-Variable -Name "_PYTHON_VENV_PROMPT_PREFIX" -ErrorAction SilentlyContinue) {
+        Remove-Variable -Name _PYTHON_VENV_PROMPT_PREFIX -Scope Global -Force
+    }
+
+    {% for var, value in envvars.items() %}if (Test-Path -Path Env:_OLD_{{ var }}) {
+        Copy-Item -Path Env:_OLD_{{ var }} -Destination Env:{{ var }}
+        Remove-Item -Path Env:_OLD_{{ var }}
+    } else {
+        if (Test-Path -Path Env:{{ var }}) {
+            Remove-Item -Path Env:{{ var }}
+        }
+    }
+    {% endfor %}
+    # Leave deactivate function in the global namespace if requested:
+    if (-not $NonDestructive) {
+        Remove-Item -Path function:deactivate
+    }
+}
+
+Copy-Item -Path Env:PATH -Destination Env:_OLD_PATH
+
+{% for var, value in envvars.items() %}if (Test-Path -Path Env:{{ var }}) {
+    Copy-Item -Path Env:{{ var }} -Destination Env:_OLD_{{ var }}
+}
+$Env:{{ var }} = "{{ value }}"
+{% endfor %}
+
+function global:_OLD_VIRTUAL_PROMPT { "" }
+Copy-Item -Path function:prompt -Destination function:_OLD_VIRTUAL_PROMPT
+New-Variable -Name _PYTHON_VENV_PROMPT_PREFIX -Description "Python virtual environment prompt prefix" -Scope Global -Option ReadOnly -Visibility Public -Value {{ prompt }}
+
+function global:prompt {
+    Write-Host -NoNewline -ForegroundColor Green "($_PYTHON_VENV_PROMPT_PREFIX) "
+    _OLD_VIRTUAL_PROMPT
+}
+$env:VIRTUAL_ENV_PROMPT = "{{ prompt }}"
