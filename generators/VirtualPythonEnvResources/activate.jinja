@@ -7,7 +7,7 @@ deactivate () {
         {{ var }}="$_OLD_{{ var }}"
         export {{ var }}
         unset _OLD_{{ var }}
-    then
+    else
         unset {{ var }}
     fi
     {% endfor %}
