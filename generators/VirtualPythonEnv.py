@@ -96,6 +96,9 @@ class VirtualPythonEnv(Generator):
 
         envvars = env.vars(self.conanfile, scope = "run")
 
+        # Install some base_packages
+        self.conanfile.run(f"""{python_venv_interpreter} -m pip install wheel setuptools""", run_environment = True, env = "conanrun")
+
         if hasattr(self.conanfile, "requirements_txts"):
             if self.conanfile.requirements_txts:
                 if hasattr(self.conanfile.requirements_txts, "__iter__") and not isinstance(self.conanfile.requirements_txts, str):
