@@ -142,7 +142,8 @@ class VirtualPythonEnv(Generator):
             activate_sh = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
 
         with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate_github_actions_buildenv.jinja"), "r") as f:
-            activate_github_actions_buildenv = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
+            env_prefix = "Env:" if self.conanfile.settings.os == "Windows" else ""
+            activate_github_actions_buildenv = Template(f.read()).render(envvars = envvars, env_prefix = env_prefix)
 
         return {
             str(Path(self.conanfile.build_folder, self._venv_path, "activate.bat")): activate_bat,

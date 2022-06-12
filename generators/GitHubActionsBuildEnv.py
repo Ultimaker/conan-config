@@ -22,8 +22,9 @@ class GitHubActionsBuildEnv(Generator):
 
     @property
     def content(self):
-        template = Template("""{% for k, v in envvars.items() %}echo "{{ k }}={{ v }}" >> $GITHUB_ENV\n{% endfor %}""")
+        template = Template("""{% for k, v in envvars.items() %}echo "{{ k }}={{ v }}" >> ${{ env_prefix }}GITHUB_ENV\n{% endfor %}""")
         build_env = VirtualBuildEnv(self.conanfile)
         env = build_env.environment()
         envvars = env.vars(self.conanfile, scope = "build")
-        return template.render(envvars = envvars)
+        env_prefix = "Env:" if self.conanfile.settings.os == "Windows" else ""
+        return template.render(envvars = envvars, env_prefix = env_prefix)
