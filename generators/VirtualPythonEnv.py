@@ -16,6 +16,15 @@ from conans import tools
 class VirtualPythonEnv(Generator):
 
     @property
+    def _script_ext(self):
+        if self.conanfile.settings.get_safe("os") == "Windows":
+            if self.conanfile.conf.get("tools.env.virtualenv:powershell", check_type = bool):
+                return ".ps1"
+            else:
+                return ".bat"
+        return ".sh"
+
+    @property
     def _venv_path(self):
         if self.settings.os == "Windows":
             return "Scripts"
@@ -121,9 +130,13 @@ class VirtualPythonEnv(Generator):
         with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate.jinja"), "r") as f:
             activate_sh = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
 
+        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate_github_actions_buildenv.jinja"), "r") as f:
+            activate_github_actions_buildenv = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
+
         return {
             str(Path(self.conanfile.build_folder, self._venv_path, "activate.bat")): activate_bat,
             str(Path(self.conanfile.build_folder, self._venv_path, "deactivate.bat.jinja")): deactivate_bat,
             str(Path(self.conanfile.build_folder, self._venv_path, "Activate.ps1")): activate_ps1,
-            str(Path(self.conanfile.build_folder, self._venv_path, "activate")): activate_sh
+            str(Path(self.conanfile.build_folder, self._venv_path, "activate")): activate_sh,
+            str(Path(self.conanfile.build_folder, self._venv_path, f"activate_github_actions_buildenv{self._script_ext}")): activate_github_actions_buildenv
         }
