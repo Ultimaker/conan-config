@@ -79,7 +79,10 @@ class VirtualPythonEnv(Generator):
             python_venv_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_venv_interpreter.parts])
 
         buffer = StringIO()
-        self.conanfile.run(f"""{python_venv_interpreter} -c "import sysconfig; print(sysconfig.get_path('purelib'))""""", env = "conanrun",
+        outer = '"' if self.conanfile.settings.os == "Windows" else "'"
+        inner = "'" if self.conanfile.settings.os == "Windows" else '"'
+        self.conanfile.run(f"{python_venv_interpreter} -c {outer}import sysconfig; print(sysconfig.get_path({inner}purelib{inner})){outer}",
+                           env = "conanrun",
                            output = buffer)
         pythonpath = buffer.getvalue().splitlines()[-1]
 
