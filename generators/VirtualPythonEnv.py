@@ -108,8 +108,7 @@ class VirtualPythonEnv(Generator):
                             requirements_txt_path = Path(self.conanfile.source_folder, req_txt)
                             if requirements_txt_path.exists():
                                 self.conanfile.run(f"""{python_venv_interpreter} -m pip install -r {requirements_txt_path}""",
-                                                   run_environment = True, env = "conanrun",
-                                                   win_bash = self.conanfile.settings.os == "Windows")
+                                                   run_environment = True, env = "conanrun")
                             else:
                                 self.conanfile.output.warn(f"Failed to find pip requirement file: {requirements_txt_path}")
                 else:
