@@ -23,5 +23,7 @@ class GitHubActionsRunEnv(Generator):
     @property
     def content(self):
         template = Template("""{% for k, v in envvars.items() %}echo "{{ k }}={{ v }}" >> $GITHUB_ENV\n{% endfor %}""")
-        envvars = self.conanfile.runenv_info.vars(self.conanfile, scope = "run")
+        build_env = VirtualRunEnv(self.conanfile)
+        env = build_env.environment()
+        envvars = env.vars(self.conanfile, scope = "run")
         return template.render(envvars = envvars)
