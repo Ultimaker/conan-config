@@ -62,9 +62,17 @@ class VirtualPythonEnv(Generator):
         # Create the virtual environment
         self.conanfile.run(f"""{python_interpreter} -m venv {self.conanfile.folders.build}""", env = "conanrun")
 
-        #
-        python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path,
-                                       Path(sys.executable).stem + Path(sys.executable).suffix)
+        # Make sure there executable is named the same on all three OSes this allows it to be called with `python`
+        # simplifying GH Actions steps
+        if self.conanfile.settings.os != "Windows":
+            python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path, "python")
+            if not python_venv_interpreter.exists():
+                python_venv_interpreter.link_to(Path(self.conanfile.build_folder, self._venv_path,
+                                       Path(sys.executable).stem + Path(sys.executable).suffix))
+        else:
+            python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path,
+                 Path(sys.executable).stem + Path(sys.executable).suffix)
+
         if not python_venv_interpreter.exists():
             raise ConanException(f"Virtual environment Python interpreter not found at: {python_venv_interpreter}")
         if self.conanfile.settings.os == "Windows":
