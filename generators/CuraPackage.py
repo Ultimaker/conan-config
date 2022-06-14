@@ -137,7 +137,7 @@ def build(build_dir, compresslevel):
 
 
 def deploy(deploy_dir, compresslevel):
-    src_dir = Path(deploy_dir, "curapackage/files")
+    src_dir = Path(deploy_dir, "curapackage/files/plugins")
     dst_file = Path(deploy_dir, "{{ package_id }}.zip")
     _compress(src_dir, dst_file, compresslevel)
 
