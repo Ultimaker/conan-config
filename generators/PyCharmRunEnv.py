@@ -43,5 +43,6 @@ class PyCharmRunEnv(Generator):
         run_env = VirtualRunEnv(self.conanfile)
         env = run_env.environment()
         envvars = env.vars(self.conanfile, scope = "run")
-        return self.run_xml.render(name = self.conanfile.name, envvars = envvars,
-                                   entrypoint = self.conanfile._conan_data["runinfo"]["entrypoint"])
+        entrypoint = self.conanfile._um_data(self.conanfile.version)["runinfo"]["entrypoint"]
+        return self.run_xml.render(name = entrypoint, envvars = envvars,
+                                   entrypoint = entrypoint)
