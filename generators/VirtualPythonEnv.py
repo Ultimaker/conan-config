@@ -10,7 +10,6 @@ from jinja2 import Template
 from conan.tools.env import VirtualRunEnv
 from conans.model import Generator
 from conans.errors import ConanException
-from conans import tools
 
 
 class VirtualPythonEnv(Generator):
@@ -36,24 +35,7 @@ class VirtualPythonEnv(Generator):
 
     @property
     def content(self):
-        from platform import python_version
-        py_version = python_version()
-        py_version = self.conanfile.options.get_safe("python_version", py_version)
-        if py_version == python_version():
-            python_interpreter = Path(sys.executable)
-        else:
-            # Need to find the requested Python version
-            # Assuming they're all installed along-side each other
-            current_py_base_version = f"{tools.Version(python_version()).major}{tools.Version(python_version()).minor}"
-            py_base_version = f"{tools.Version(py_version).major}{tools.Version(py_version).minor}"
-            base_exec_prefix = sys.exec_prefix.split(current_py_base_version)
-            if len(base_exec_prefix) != 2:
-                raise ConanException(f"Could not find requested Python version {py_version}")
-            py_exec_prefix = Path(base_exec_prefix[0] + py_base_version)
-            py_exec = Path(sys.executable)
-            python_interpreter = py_exec_prefix.joinpath(py_exec.stem + py_exec.suffix)
-            if not python_interpreter.exists():
-                raise ConanException(f"Could not find requested Python executable at: {python_interpreter}")
+        python_interpreter = self.conanfile.deps_user_info["cpython"].python
 
         # When on Windows execute as Windows Path
         if self.conanfile.settings.os == "Windows":
@@ -67,7 +49,7 @@ class VirtualPythonEnv(Generator):
         if self.conanfile.settings.os != "Windows":
             python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path, "python")
             if not python_venv_interpreter.exists():
-                python_venv_interpreter.link_to(Path(self.conanfile.build_folder, self._venv_path,
+                python_venv_interpreter.hardlink_to(Path(self.conanfile.build_folder, self._venv_path,
                                        Path(sys.executable).stem + Path(sys.executable).suffix))
         else:
             python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path,
