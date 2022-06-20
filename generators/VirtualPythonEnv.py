@@ -35,7 +35,7 @@ class VirtualPythonEnv(Generator):
 
     @property
     def content(self):
-        python_interpreter = self.conanfile.deps_user_info["cpython"].python
+        python_interpreter = Path(self.conanfile.deps_user_info["cpython"].python)
 
         # When on Windows execute as Windows Path
         if self.conanfile.settings.os == "Windows":
