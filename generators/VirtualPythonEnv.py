@@ -42,7 +42,7 @@ class VirtualPythonEnv(Generator):
             python_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_interpreter.parts])
 
         # Create the virtual environment
-        self.conanfile.run(f"""{python_interpreter} -m venv {self.conanfile.folders.build}""", env = "conanrun")
+        self.conanfile.run(f"""{python_interpreter} -m venv {self.conanfile.folders.build}""", run_environment = True, env = "conanrun")
 
         # Make sure there executable is named the same on all three OSes this allows it to be called with `python`
         # simplifying GH Actions steps
