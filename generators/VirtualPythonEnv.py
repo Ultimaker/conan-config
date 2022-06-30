@@ -84,7 +84,7 @@ class VirtualPythonEnv(Generator):
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
 
-        envvars = env.vars(self.conanfile, scope = "run")
+        envvars = env.vars(conanfile, scope = "run")
 
         # Install some base_packages
         conanfile.run(f"""{python_venv_interpreter} -m pip install wheel setuptools""", run_environment = True, env = "conanrun")
@@ -137,14 +137,30 @@ class VirtualPythonEnv(Generator):
                 run_environment = True,
                 env = "conanrun")
 
-        # Generate the Python Virtual Environment Script
-        envvars.save_sh(Path(venv_folder, self._venv_path, "activate"))
-        envvars.save_bat(Path(venv_folder, self._venv_path, "activate.bat"))
-        envvars.save_ps1(Path(venv_folder, self._venv_path, "Activate.ps1"))
+        # Add all dlls/dylibs/so found in site-packages to the PATH, DYLD_LIBRARY_PATH and LD_LIBRARY_PATH
+        dll_paths = list({ dll.parent for dll in Path(pythonpath).glob("**/*.dll") })
+        for dll_path in dll_paths:
+            env.append_path("PATH", str(dll_path))
 
-        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate_github_actions_buildenv.jinja"), "r") as f:
-            env_prefix = "Env:" if self.conanfile.settings.os == "Windows" else ""
-            activate_github_actions_buildenv = Template(f.read()).render(envvars = envvars, env_prefix = env_prefix)
+        dylib_paths = list({ dylib.parent for dylib in Path(pythonpath).glob("**/*.dylib") })
+        for dylib_path in dylib_paths:
+            env.append_path("DYLD_LIBRARY_PATH", str(dylib_path))
+
+        so_paths = list({ so.parent for so in Path(pythonpath).glob("**/*.dylib") })
+        for so_path in so_paths:
+            env.append_path("LD_LIBRARY_PATH", str(so_path))
+
+        full_envvars = env.vars(conanfile, scope = "run")
+
+        # Generate the Python Virtual Environment Script
+        full_envvars.save_sh(Path(venv_folder, self._venv_path, "activate"))
+        full_envvars.save_bat(Path(venv_folder, self._venv_path, "activate.bat"))
+        full_envvars.save_ps1(Path(venv_folder, self._venv_path, "Activate.ps1"))
+
+        # Generate the GitHub Action activation script
+        env_prefix = "Env:" if conanfile.settings.os == "Windows" else ""
+        activate_github_actions_buildenv = Template(r"""{% for var, value in envvars.items() %}echo "{{ var }}={{ value }}" >> ${{ env_prefix }}GITHUB_ENV
+{% endfor %}""").render(envvars = full_envvars, env_prefix = env_prefix)
 
         return {
             str(Path(venv_folder, self._venv_path, f"activate_github_actions_env{self._script_ext}")): activate_github_actions_buildenv
