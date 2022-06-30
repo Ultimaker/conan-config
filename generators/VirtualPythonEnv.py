@@ -95,7 +95,7 @@ class VirtualPythonEnv(Generator):
             if len(dep_user_info.vars) == 0:
                 continue
             pip_req_paths = [conanfile.deps_cpp_info[dep_name].res_paths[i] for i, req_path in
-                             enumerate(conanfile.deps_cpp_info[dep_name].resdirs) if req_path == "pip_requirements"]
+                             enumerate(conanfile.deps_cpp_info[dep_name].resdirs) if req_path.endswith("pip_requirements")]
             if len(pip_req_paths) != 1:
                 continue
             pip_req_base_path = Path(pip_req_paths[0])
