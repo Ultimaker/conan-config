@@ -138,26 +138,14 @@ class VirtualPythonEnv(Generator):
                 env = "conanrun")
 
         # Generate the Python Virtual Environment Script
-        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate.bat.jinja"), "r") as f:
-            activate_bat = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
-
-        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "deactivate.bat.jinja"), "r") as f:
-            deactivate_bat = Template(f.read()).render(envvars = envvars)
-
-        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "Activate.ps1.jinja"), "r") as f:
-            activate_ps1 = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
-
-        with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate.jinja"), "r") as f:
-            activate_sh = Template(f.read()).render(envvars = envvars, prompt = self.conanfile.name)
+        envvars.save_sh(Path(venv_folder, self._venv_path, "activate"))
+        envvars.save_bat(Path(venv_folder, self._venv_path, "activate.bat"))
+        envvars.save_ps1(Path(venv_folder, self._venv_path, "Activate.ps1"))
 
         with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate_github_actions_buildenv.jinja"), "r") as f:
             env_prefix = "Env:" if self.conanfile.settings.os == "Windows" else ""
             activate_github_actions_buildenv = Template(f.read()).render(envvars = envvars, env_prefix = env_prefix)
 
         return {
-            str(Path(venv_folder, self._venv_path, "activate.bat")): activate_bat,
-            str(Path(venv_folder, self._venv_path, "deactivate.bat.jinja")): deactivate_bat,
-            str(Path(venv_folder, self._venv_path, "Activate.ps1")): activate_ps1,
-            str(Path(venv_folder, self._venv_path, "activate")): activate_sh,
             str(Path(venv_folder, self._venv_path, f"activate_github_actions_env{self._script_ext}")): activate_github_actions_buildenv
         }

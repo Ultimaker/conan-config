@@ -1,9 +1,0 @@
-@echo off
-
-{% for var in envvars.keys() %}if defined _OLD_{{ var }} (
-    set "{{ var }}=%_OLD_{{ var }}%"
-)
-set _OLD_{{ var }}=
-{% endfor %}
-
-:END
