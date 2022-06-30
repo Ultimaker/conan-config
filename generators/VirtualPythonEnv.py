@@ -118,6 +118,16 @@ class VirtualPythonEnv(Generator):
                     conanfile.output.warn(
                         f"Dependency {dep_name} specifies pip_requirements_git in user_info but {req_txt} can't be found!")
 
+            if hasattr(dep_user_info, "pip_requirements_build"):
+                req_txt = pip_req_base_path.joinpath(dep_user_info.pip_requirements_build)
+                if req_txt.exists():
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                                  env = "conanrun")
+                    conanfile.output.success(f"Dependency {dep_name} specifies pip_requirements_build in user_info installed!")
+                else:
+                    conanfile.output.warn(
+                        f"Dependency {dep_name} specifies pip_requirements_build in user_info but {req_txt} can't be found!")
+
         if not conanfile.in_local_cache:
             # Install the Python requirements of the current conanfile requirements*.txt
             pip_req_base_path = Path(conanfile.cpp_info.rootpath, conanfile.cpp_info.resdirs[-1])
