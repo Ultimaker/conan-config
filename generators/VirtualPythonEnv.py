@@ -7,6 +7,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from conan import ConanFile
 from conan.tools.env import VirtualRunEnv
 from conans.model import Generator
 from conans.errors import ConanException
@@ -35,82 +36,106 @@ class VirtualPythonEnv(Generator):
 
     @property
     def content(self):
+        conanfile: ConanFile = self.conanfile
         python_interpreter = Path(self.conanfile.deps_user_info["cpython"].python)
 
         # When on Windows execute as Windows Path
-        if self.conanfile.settings.os == "Windows":
+        if conanfile.settings.os == "Windows":
             python_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_interpreter.parts])
 
         # Create the virtual environment
-        self.conanfile.run(f"""{python_interpreter} -m venv {self.conanfile.folders.build}""", run_environment = True, env = "conanrun")
+        if conanfile.install_folder is None:
+            if conanfile.build_folder is None:
+                venv_folder = Path(os.getcwd(), "venv")
+            else:
+                venv_folder = conanfile.build_folder
+        else:
+            venv_folder = conanfile.install_folder
+        conanfile.run(f"""{python_interpreter} -m venv {venv_folder}""", run_environment = True, env = "conanrun")
 
         # Make sure there executable is named the same on all three OSes this allows it to be called with `python`
         # simplifying GH Actions steps
-        if self.conanfile.settings.os != "Windows":
-            python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path, "python")
+        if conanfile.settings.os != "Windows":
+            python_venv_interpreter = Path(venv_folder, self._venv_path, "python")
             if not python_venv_interpreter.exists():
-                python_venv_interpreter.hardlink_to(Path(self.conanfile.build_folder, self._venv_path,
-                                       Path(sys.executable).stem + Path(sys.executable).suffix))
+                python_venv_interpreter.hardlink_to(
+                    Path(venv_folder, self._venv_path, Path(sys.executable).stem + Path(sys.executable).suffix))
         else:
-            python_venv_interpreter = Path(self.conanfile.build_folder, self._venv_path,
-                 Path(sys.executable).stem + Path(sys.executable).suffix)
+            python_venv_interpreter = Path(venv_folder, self._venv_path, Path(sys.executable).stem + Path(sys.executable).suffix)
 
         if not python_venv_interpreter.exists():
             raise ConanException(f"Virtual environment Python interpreter not found at: {python_venv_interpreter}")
-        if self.conanfile.settings.os == "Windows":
+        if conanfile.settings.os == "Windows":
             python_venv_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_venv_interpreter.parts])
 
         buffer = StringIO()
-        outer = '"' if self.conanfile.settings.os == "Windows" else "'"
-        inner = "'" if self.conanfile.settings.os == "Windows" else '"'
-        self.conanfile.run(f"{python_venv_interpreter} -c {outer}import sysconfig; print(sysconfig.get_path({inner}purelib{inner})){outer}",
-                           env = "conanrun",
-                           output = buffer)
+        outer = '"' if conanfile.settings.os == "Windows" else "'"
+        inner = "'" if conanfile.settings.os == "Windows" else '"'
+        conanfile.run(f"{python_venv_interpreter} -c {outer}import sysconfig; print(sysconfig.get_path({inner}purelib{inner})){outer}",
+                      env = "conanrun",
+                      output = buffer)
         pythonpath = buffer.getvalue().splitlines()[-1]
 
-        run_env = VirtualRunEnv(self.conanfile)
+        run_env = VirtualRunEnv(conanfile)
         env = run_env.environment()
 
-        env.define_path("VIRTUAL_ENV", self.conanfile.build_folder)
-        env.prepend_path("PATH", os.path.join(self.conanfile.build_folder, self._venv_path))
+        env.define_path("VIRTUAL_ENV", venv_folder)
+        env.prepend_path("PATH", os.path.join(venv_folder, self._venv_path))
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
 
         envvars = env.vars(self.conanfile, scope = "run")
 
         # Install some base_packages
-        self.conanfile.run(f"""{python_venv_interpreter} -m pip install wheel setuptools""", run_environment = True, env = "conanrun")
+        conanfile.run(f"""{python_venv_interpreter} -m pip install wheel setuptools""", run_environment = True, env = "conanrun")
 
-        if hasattr(self.conanfile, "requirements_txts"):
-            if self.conanfile.requirements_txts:
-                if hasattr(self.conanfile.requirements_txts, "__iter__") and not isinstance(self.conanfile.requirements_txts, str):
-                    # conanfile has a list of requirements_txts specified
-                    for req_txt in self.conanfile.requirements_txts:
-                        with envvars.apply():
-                            requirements_txt_path = Path(self.conanfile.source_folder, req_txt)
-                            if requirements_txt_path.exists():
-                                self.conanfile.run(f"""{python_venv_interpreter} -m pip install -r {requirements_txt_path}""",
-                                                   run_environment = True, env = "conanrun")
-                            else:
-                                self.conanfile.output.warn(f"Failed to find pip requirement file: {requirements_txt_path}")
+        # Install pip_requirements from dependencies
+        for dep_name in reversed(conanfile.deps_user_info):
+            dep_user_info = conanfile.deps_user_info[dep_name]
+            if len(dep_user_info.vars) == 0:
+                continue
+            pip_req_paths = [conanfile.deps_cpp_info[dep_name].res_paths[i] for i, req_path in
+                             enumerate(conanfile.deps_cpp_info[dep_name].resdirs) if req_path == "pip_requirements"]
+            if len(pip_req_paths) != 1:
+                continue
+            pip_req_base_path = Path(pip_req_paths[0])
+            if hasattr(dep_user_info, "pip_requirements"):
+                req_txt = pip_req_base_path.joinpath(dep_user_info.pip_requirements)
+                if req_txt.exists():
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                                  env = "conanrun")
+                    conanfile.output.success(f"Dependency {dep_name} specifies pip_requirements in user_info installed!")
                 else:
-                    # conanfile has a single requirements_txt specified
-                    with envvars.apply():
-                        requirements_txt_path = Path(self.conanfile.source_folder, self.conanfile.requirements_txts)
-                        if requirements_txt_path.exists():
-                            self.conanfile.run(f"""{python_venv_interpreter} -m pip install -r {requirements_txt_path}""",
-                                               run_environment = True, env = "conanrun")
-                        else:
-                            self.conanfile.output.warn(f"Failed to find pip requirement file: {requirements_txt_path}")
-        else:
-            # No requirements_txts found in the conanfile looking for a requirements.txt in the source_folder
-            requirements_txt_path = Path(self.conanfile.source_folder, "requirements.txt")
-            if requirements_txt_path.exists():
-                with envvars.apply():
-                    self.conanfile.run(f"""{python_venv_interpreter} -m pip install -r {requirements_txt_path}""", run_environment = True,
-                                       env = "conanrun")
-            else:
-                self.conanfile.output.warn(f"Failed to find pip requirement file: {requirements_txt_path}")
+                    conanfile.output.warn(f"Dependency {dep_name} specifies pip_requirements in user_info but {req_txt} can't be found!")
+
+            if hasattr(dep_user_info, "pip_requirements_git"):
+                req_txt = pip_req_base_path.joinpath(dep_user_info.pip_requirements_git)
+                if req_txt.exists():
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                                  env = "conanrun")
+                    conanfile.output.success(f"Dependency {dep_name} specifies pip_requirements_git in user_info installed!")
+                else:
+                    conanfile.output.warn(
+                        f"Dependency {dep_name} specifies pip_requirements_git in user_info but {req_txt} can't be found!")
+
+        if not conanfile.in_local_cache:
+            # Install the Python requirements of the current conanfile requirements*.txt
+            pip_req_base_path = Path(conanfile.cpp_info.rootpath, conanfile.cpp_info.resdirs[-1])
+            # Add the dev reqs needed for pyinstaller
+            conanfile.run(
+                f"{python_venv_interpreter} -m pip install -r {pip_req_base_path.joinpath(conanfile.user_info.pip_requirements_build)} --force-reinstall",
+                run_environment = True, env = "conanrun")
+
+            # Install the requirements.text for cura
+            conanfile.run(
+                f"{python_venv_interpreter} -m pip install -r {pip_req_base_path.joinpath(conanfile.user_info.pip_requirements_git)} --force-reinstall",
+                run_environment = True, env = "conanrun")
+            # Do the final requirements last such that these dependencies takes precedence over possible previous installed Python modules.
+            # Since these are actually shipped with Cura and therefore require hashes and pinned version numbers in the requirements.txt
+            self.run(
+                f"{python_venv_interpreter} -m pip install -r {pip_req_base_path.joinpath(conanfile.user_info.pip_requirements)} --force-reinstall",
+                run_environment = True,
+                env = "conanrun")
 
         # Generate the Python Virtual Environment Script
         with open(Path(__file__).parent.joinpath("VirtualPythonEnvResources", "activate.bat.jinja"), "r") as f:
@@ -130,9 +155,9 @@ class VirtualPythonEnv(Generator):
             activate_github_actions_buildenv = Template(f.read()).render(envvars = envvars, env_prefix = env_prefix)
 
         return {
-            str(Path(self.conanfile.build_folder, self._venv_path, "activate.bat")): activate_bat,
-            str(Path(self.conanfile.build_folder, self._venv_path, "deactivate.bat.jinja")): deactivate_bat,
-            str(Path(self.conanfile.build_folder, self._venv_path, "Activate.ps1")): activate_ps1,
-            str(Path(self.conanfile.build_folder, self._venv_path, "activate")): activate_sh,
-            str(Path(self.conanfile.build_folder, self._venv_path, f"activate_github_actions_env{self._script_ext}")): activate_github_actions_buildenv
+            str(Path(venv_folder, self._venv_path, "activate.bat")): activate_bat,
+            str(Path(venv_folder, self._venv_path, "deactivate.bat.jinja")): deactivate_bat,
+            str(Path(venv_folder, self._venv_path, "Activate.ps1")): activate_ps1,
+            str(Path(venv_folder, self._venv_path, "activate")): activate_sh,
+            str(Path(venv_folder, self._venv_path, f"activate_github_actions_env{self._script_ext}")): activate_github_actions_buildenv
         }
