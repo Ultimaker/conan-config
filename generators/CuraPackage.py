@@ -3,8 +3,8 @@ import shutil
 import json
 import sysconfig
 import hashlib
-
 from pathlib import Path
+from typing import List, Set, Tuple
 
 from jinja2 import Template
 
@@ -15,6 +15,69 @@ from conans.tools import Version
 
 FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 FILTERED_DIRS = ["include"]
+
+
+def _hashPath(path: str, verbose: bool = False) -> str:
+    """
+    Calls the hash function according to the type of the path (directory or file).
+
+    :param path: The path that needs to be hashed.
+    :return: A cryptographic hash of the specified path.
+    """
+    if os.path.isdir(path):
+        return _hashDirectory(path, verbose)
+    elif os.path.isfile(path):
+        return _hashFile(path, verbose)
+    raise FileNotFoundError(f"The specified path '{path}' was neither a file nor a directory.")
+
+
+def _hashFile(file_path: str, verbose: bool = False) -> str:
+    """
+    Returns a SHA-256 hash of the specified file.
+
+    :param file_path: The path to a file to get the hash of.
+    :return: A cryptographic hash of the specified file.
+    """
+    block_size = 2 ** 16
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        contents = f.read(block_size)
+        while len(contents) > 0:
+            hasher.update(contents)
+            contents = f.read(block_size)
+    if verbose:
+        print(f"Hashing {file_path}")
+    return hasher.hexdigest()
+
+
+def _hashDirectory(directory_path: str, exclude_paths: Set[str], verbose: bool = False) -> str:
+    """
+    Returns a SHA-256 hash of the specified directory. The hash is calculated by hashing all individual files and then
+    appending all the filenames/hashes together. The hash of that string is the hash of the folder.
+
+    :param directory_path: The path to a directory to get the hash of.
+    :return: A cryptographic hash of the specified directory.
+    """
+    hash_list: List[Tuple[str, str]] = []  # Contains a list of (relative_file_path, file_hash) tuples
+    for root, _, filenames in os.walk(directory_path):
+        if root in exclude_paths:
+            continue
+        for filename in filenames:
+            rel_dir_path = os.path.relpath(root, directory_path)
+            rel_path = os.path.join(rel_dir_path, filename)
+            if rel_dir_path in exclude_paths or rel_path in exclude_paths:
+                continue
+            abs_path = os.path.join(root, filename)
+            hash_list.append((rel_path, _hashFile(abs_path, verbose)))
+
+    # We need to be sure that the list is sorted by the relative_file_path to account for cases where the files are read
+    # in different orders.
+    ordered_list = sorted(hash_list, key=lambda x: x[0])
+
+    hasher = hashlib.sha256()
+    for i in ordered_list:
+        hasher.update("".join(i).encode('utf-8'))
+    return hasher.hexdigest()
 
 
 class CuraPackage(Generator):
@@ -217,6 +280,7 @@ if __name__ == "__main__":
         deps = {}
 
         central_storage = []
+        exclude_paths_from_hashing = set()
 
         for dep_name in self.conanfile.deps_cpp_info.deps:
             deps[dep_name] = {"binpaths": set(),
@@ -238,10 +302,12 @@ if __name__ == "__main__":
                 files += [d for d in dirs if os.path.islink(os.path.join(root, d))]
                 rel_path = Path(os.path.relpath(root, rootpath))
                 if rel_path in FILTERED_DIRS or any([rel_path.is_relative_to(d) for d in FILTERED_DIRS]):
+                    exclude_paths_from_hashing.add(os.path.relpath(root, rootpath))
                     continue
 
                 for f in files:
                     if f in FILTERED_FILES:
+                        exclude_paths_from_hashing.add(os.path.join(os.path.relpath(root, rootpath), f))
                         continue
 
                     src = Path(os.path.normpath(os.path.join(root, f)))
@@ -264,25 +330,17 @@ if __name__ == "__main__":
                         if os.path.isfile(dst) or os.path.islink(dst):
                             os.unlink(dst)
                         os.symlink(linkto, dst)
-                        if calc_hash:
-                            hash_files[rel_path] = sha256sum(linkto)
                     else:
                         if dst.exists():
                             src_hash = sha256sum(src)
                             if sha256sum(dst) == src_hash:
-                                if calc_hash:
-                                    hash_files[rel_path] = src_hash
                                 continue
-                        if calc_hash:
-                            hash_files[rel_path] = src_hash if dst.exists() else sha256sum(src)
                         shutil.copy(src, dst)
+
             if calc_hash:
-                sorted_hash_paths = sorted(hash_files.keys())
-                hasher = hashlib.sha256()
-                for hash_path in sorted_hash_paths:
-                    hasher.update("".join((str(hash_path), hash_files[hash_path])).encode('utf-8'))
+                cs_dep_hash = _hashDirectory(rootpath, exclude_paths=exclude_paths_from_hashing)
                 dep_version = Version(self.conanfile.deps_cpp_info[dep_name].version)
-                central_storage.append([os.path.join("deps", dep_name), dep_name, f"{dep_version.major}.{dep_version.minor}.{dep_version.patch}", hasher.hexdigest()])
+                central_storage.append([os.path.join("deps", dep_name), dep_name, f"{dep_version.major}.{dep_version.minor}.{dep_version.patch}", cs_dep_hash])
 
 
             deps[dep_name]["binpaths"] = {bin_dir.relative_to(dep_name) for bin_dir in deps[dep_name]["binpaths"] if Path(self._curapackage_deps_path, bin_dir).exists()}
