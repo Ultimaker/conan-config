@@ -247,7 +247,7 @@ if __name__ == "__main__":
     """)
 
     def subdict(self, base, *keys, **kwargs):
-        sub = dict(zip(keys, [base[k] for k in keys]))
+        sub = { k: base[k] for k in keys }
         for k, v in kwargs.items():
             sub[k] = base[v]
         return sub
