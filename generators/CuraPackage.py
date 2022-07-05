@@ -14,7 +14,7 @@ from conans.util.files import mkdir, sha256sum
 from conans.tools import Version
 
 FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
-FILTERED_DIRS = ["include"]
+FILTERED_DIRS = ["include", ".git", ".github"]
 
 
 def _hashPath(path: str, verbose: bool = False) -> str:
@@ -161,7 +161,7 @@ from pathlib import Path
 
 from conans.util.files import mkdir, sha256sum
 
-FILTERED_DIRS = ["deps", "__pycache__"]
+FILTERED_DIRS = ["deps", "__pycache__", ".git", ".github"]
 
 
 def configure(source_dir, build_dir):

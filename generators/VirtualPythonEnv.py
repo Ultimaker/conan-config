@@ -55,19 +55,18 @@ class VirtualPythonEnv(Generator):
 
         envvars = env.vars(self.conanfile, scope = "run")
 
-        if hasattr(self.conanfile, "requirements_txts"):
-            if self.conanfile.requirements_txts:
-                if hasattr(self.conanfile.requirements_txts, "__iter__") and not isinstance(self.conanfile.requirements_txts, str):
-                    for req_txt in self.conanfile.requirements_txts:
-                        with envvars.apply():
-                            self.conanfile.run(
-                                f"{python_interpreter} -m pip install -r {os.path.join(self.conanfile.source_folder, req_txt)}",
-                                run_environment = True, env = "conanrun")
-                else:
+        if hasattr(self.conanfile, "requirements_txts") and self.conanfile.requirements_txts:
+            if hasattr(self.conanfile.requirements_txts, "__iter__") and not isinstance(self.conanfile.requirements_txts, str):
+                for req_txt in self.conanfile.requirements_txts:
                     with envvars.apply():
                         self.conanfile.run(
-                            f"{python_interpreter} -m pip install -r {os.path.join(self.conanfile.source_folder, self.conanfile.requirements_txts)}",
+                            f"{python_interpreter} -m pip install -r {os.path.join(self.conanfile.source_folder, req_txt)}",
                             run_environment = True, env = "conanrun")
+            else:
+                with envvars.apply():
+                    self.conanfile.run(
+                        f"{python_interpreter} -m pip install -r {os.path.join(self.conanfile.source_folder, self.conanfile.requirements_txts)}",
+                        run_environment = True, env = "conanrun")
 
         template = Template("""\
 deactivate()
