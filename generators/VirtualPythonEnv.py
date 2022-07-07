@@ -128,24 +128,18 @@ class VirtualPythonEnv(Generator):
                     conanfile.output.warn(
                         f"Dependency {dep_name} specifies pip_requirements_build in user_info but {req_txt} can't be found!")
 
-        if not conanfile.in_local_cache:
+        if not conanfile.in_local_cache and hasattr(conanfile, "requirements_txts"):
             # Install the Python requirements of the current conanfile requirements*.txt
-            pip_req_base_path = Path(conanfile.cpp_info.rootpath, conanfile.cpp_info.resdirs[-1])
-            # Add the dev reqs needed for pyinstaller
-            conanfile.run(
-                f"{python_venv_interpreter} -m pip install -r {pip_req_base_path.joinpath(conanfile.user_info.pip_requirements_build)} --force-reinstall",
-                run_environment = True, env = "conanrun")
+            pip_req_base_path = Path(conanfile.source_folder)
 
-            # Install the requirements.text for cura
-            conanfile.run(
-                f"{python_venv_interpreter} -m pip install -r {pip_req_base_path.joinpath(conanfile.user_info.pip_requirements_git)} --force-reinstall",
-                run_environment = True, env = "conanrun")
-            # Do the final requirements last such that these dependencies takes precedence over possible previous installed Python modules.
-            # Since these are actually shipped with Cura and therefore require hashes and pinned version numbers in the requirements.txt
-            self.run(
-                f"{python_venv_interpreter} -m pip install -r {pip_req_base_path.joinpath(conanfile.user_info.pip_requirements)} --force-reinstall",
-                run_environment = True,
-                env = "conanrun")
+            for req_path in sorted(conanfile.requirements_txts, reverse = True):
+                req_txt = pip_req_base_path.joinpath(req_path)
+                if req_txt.exists():
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                                  env = "conanrun")
+                    conanfile.output.success(f"Requirements file {req_txt} installed!")
+                else:
+                    conanfile.output.warn(f"Requirements file {req_txt} can't be found!")
 
         # Add all dlls/dylibs/so found in site-packages to the PATH, DYLD_LIBRARY_PATH and LD_LIBRARY_PATH
         dll_paths = list({ dll.parent for dll in Path(pythonpath).glob("**/*.dll") })
