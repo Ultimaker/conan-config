@@ -44,13 +44,14 @@ class VirtualPythonEnv(Generator):
             python_interpreter = Path(*[f'"{p}"' if " " in p else p for p in python_interpreter.parts])
 
         # Create the virtual environment
-        if conanfile.install_folder is None:
-            if conanfile.build_folder is None:
-                venv_folder = Path(os.getcwd(), "venv")
-            else:
-                venv_folder = conanfile.build_folder
-        else:
+        print(f"Creating virtual environment in {conanfile.install_folder}")
+        print(f"Creating virtual environment in {conanfile.build_folder}")
+        if conanfile.in_local_cache:
             venv_folder = conanfile.install_folder
+        else:
+            venv_folder = conanfile.build_folder if conanfile.build_folder else  Path(os.getcwd(), "venv")
+
+        conanfile.output.info(f"Creating virtual environment in {venv_folder}")
         conanfile.run(f"""{python_interpreter} -m venv {venv_folder}""", run_environment = True, env = "conanrun")
 
         # Make sure there executable is named the same on all three OSes this allows it to be called with `python`
