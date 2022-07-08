@@ -18,10 +18,7 @@ class VirtualPythonEnv(Generator):
     @property
     def _script_ext(self):
         if self.conanfile.settings.get_safe("os") == "Windows":
-            if self.conanfile.conf.get("tools.env.virtualenv:powershell", check_type = bool):
-                return ".ps1"
-            else:
-                return ".bat"
+            return ".ps1"
         return ".sh"
 
     @property
