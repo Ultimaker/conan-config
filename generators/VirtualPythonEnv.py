@@ -79,6 +79,8 @@ class VirtualPythonEnv(Generator):
 
         env.define_path("VIRTUAL_ENV", venv_folder)
         env.prepend_path("PATH", os.path.join(venv_folder, self._venv_path))
+        env.prepend_path("LD_LIBRARY_PATH", os.path.join(venv_folder, self._venv_path))
+        env.prepend_path("DYLD_LYBRARY_PATH", os.path.join(venv_folder, self._venv_path))
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
 
