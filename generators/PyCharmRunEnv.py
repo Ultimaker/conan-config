@@ -35,7 +35,7 @@ class PyCharmRunEnv(Generator):
 
     @property
     def filename(self):
-        stem = Path(self.conanfile._um_data(self.conanfile.version)["runinfo"]["entrypoint"]).stem
+        stem = Path(self.conanfile._um_data(self.conanfile.version, self.channel)["runinfo"]["entrypoint"]).stem
         return str(Path(self.conanfile.source_folder).joinpath(".run", f"{stem}.run.xml"))
 
     @property
@@ -43,6 +43,6 @@ class PyCharmRunEnv(Generator):
         run_env = VirtualRunEnv(self.conanfile)
         env = run_env.environment()
         envvars = env.vars(self.conanfile, scope = "run")
-        entrypoint = self.conanfile._um_data(self.conanfile.version)["runinfo"]["entrypoint"]
+        entrypoint = self.conanfile._um_data(self.conanfile.version, self.channel)["runinfo"]["entrypoint"]
         return self.run_xml.render(name = entrypoint, envvars = envvars,
                                    entrypoint = entrypoint)
