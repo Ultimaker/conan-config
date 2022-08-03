@@ -77,14 +77,17 @@ class VirtualPythonEnv(Generator):
         run_env = VirtualRunEnv(conanfile)
         env = run_env.environment()
 
+        if hasattr(self.conanfile, f"_{self.conanfile.name}_run_env"):
+            project_run_env = getattr(self.conanfile, f"_{self.conanfile.name}_run_env")
+            if project_run_env:
+                env.compose_env(project_run_env)  # TODO: Add logic for dependencies
+
         env.define_path("VIRTUAL_ENV", venv_folder)
         env.prepend_path("PATH", os.path.join(venv_folder, self._venv_path))
         env.prepend_path("LD_LIBRARY_PATH", os.path.join(venv_folder, self._venv_path))
         env.prepend_path("DYLD_LYBRARY_PATH", os.path.join(venv_folder, self._venv_path))
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
-
-        envvars = env.vars(conanfile, scope = "run")
 
         # Install some base_packages
         conanfile.run(f"""{python_venv_interpreter} -m pip install wheel setuptools""", run_environment = True, env = "conanrun")
@@ -102,7 +105,7 @@ class VirtualPythonEnv(Generator):
             if hasattr(dep_user_info, "pip_requirements"):
                 req_txt = pip_req_base_path.joinpath(dep_user_info.pip_requirements)
                 if req_txt.exists():
-                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --upgrade", run_environment = True,
                                   env = "conanrun")
                     conanfile.output.success(f"Dependency {dep_name} specifies pip_requirements in user_info installed!")
                 else:
@@ -111,7 +114,7 @@ class VirtualPythonEnv(Generator):
             if hasattr(dep_user_info, "pip_requirements_git"):
                 req_txt = pip_req_base_path.joinpath(dep_user_info.pip_requirements_git)
                 if req_txt.exists():
-                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --upgrade", run_environment = True,
                                   env = "conanrun")
                     conanfile.output.success(f"Dependency {dep_name} specifies pip_requirements_git in user_info installed!")
                 else:
@@ -121,7 +124,7 @@ class VirtualPythonEnv(Generator):
             if hasattr(dep_user_info, "pip_requirements_build"):
                 req_txt = pip_req_base_path.joinpath(dep_user_info.pip_requirements_build)
                 if req_txt.exists():
-                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --upgrade", run_environment = True,
                                   env = "conanrun")
                     conanfile.output.success(f"Dependency {dep_name} specifies pip_requirements_build in user_info installed!")
                 else:
@@ -135,7 +138,7 @@ class VirtualPythonEnv(Generator):
             for req_path in sorted(conanfile.requirements_txts, reverse = True):
                 req_txt = pip_req_base_path.joinpath(req_path)
                 if req_txt.exists():
-                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --force-reinstall", run_environment = True,
+                    conanfile.run(f"{python_venv_interpreter} -m pip install -r {req_txt} --upgrade", run_environment = True,
                                   env = "conanrun")
                     conanfile.output.success(f"Requirements file {req_txt} installed!")
                 else:
@@ -154,7 +157,7 @@ class VirtualPythonEnv(Generator):
         for so_path in so_paths:
             env.append_path("LD_LIBRARY_PATH", str(so_path))
 
-        full_envvars = env.vars(conanfile, scope = "run")
+        full_envvars = env.vars(conanfile, scope = "conanrun")
 
         # Generate the Python Virtual Environment Script
         full_envvars.save_sh(Path(venv_folder, self._venv_path, "activate"))
