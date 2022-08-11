@@ -1,39 +1,12 @@
 from pathlib import Path
-
-from jinja2 import Template
+from typing import Dict
 
 from conans import tools
-from conan.tools.env import VirtualRunEnv
 from conans.model import Generator
-
+from jinja2 import Template
+from conan.tools.env.virtualrunenv import VirtualRunEnv
 
 class PyCharmRunEnv(Generator):
-    run_xml = Template(r"""<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="{{ name }}" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
-    <module name="{{ module_name }}" />
-    <option name="INTERPRETER_OPTIONS" value="" />
-    <option name="PARENT_ENVS" value="true" />
-    <envs>
-      <env name="PYTHONUNBUFFERED" value="1" />{% for key, value in envvars.items() %}
-      <env name="{{ key }}" value="{{ value }}" />{% endfor %}
-    </envs>
-    <option name="SDK_HOME" value="{{ sdk_path }}" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-    <option name="IS_MODULE_SDK" value="true" />
-    <option name="ADD_CONTENT_ROOTS" value="true" />
-    <option name="ADD_SOURCE_ROOTS" value="true" />
-    <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/{{ script_name }}" />
-    <option name="PARAMETERS" value="{{ parameters }}" />
-    <option name="SHOW_COMMAND_LINE" value="false" />
-    <option name="EMULATE_TERMINAL" value="false" />
-    <option name="MODULE_MODE" value="false" />
-    <option name="REDIRECT_INPUT" value="false" />
-    <option name="INPUT_FILE" value="" />
-    <method v="2" />
-  </configuration>
-</component>    """)
-
     @property
     def _base_dir(self):
         return Path("$PROJECT_DIR$", "venv")
@@ -57,9 +30,16 @@ class PyCharmRunEnv(Generator):
         pass
 
     @property
-    def content(self):
-        run_env = VirtualRunEnv(self.conanfile)
-        env = run_env.environment()
+    def content(self) -> Dict[str, str]:
+        # Mapping of file names -> files
+        run_configurations: Dict[str, str] = {}
+
+        if not hasattr(self.conanfile, "_pycharm_targets"):
+            # There are no _pycharm_targets in the conanfile for the package using this generator.
+            return run_configurations
+
+        # Collect environment variables for use in the template
+        env = VirtualRunEnv(self.conanfile).environment()
         env.prepend_path("PYTHONPATH", str(self._site_packages))
 
         if hasattr(self.conanfile, f"_{self.conanfile.name}_run_env"):
@@ -67,17 +47,16 @@ class PyCharmRunEnv(Generator):
             if project_run_env:
                 env.compose_env(project_run_env)  # TODO: Add logic for dependencies
 
-        envvars = env.vars(self.conanfile, scope = "run")
+        # Create Pycharm run configuration from template for each target
+        for target in self.conanfile._pycharm_targets:
+            target["env_vars"] = env.vars(self.conanfile, scope="run")
+            target["sdk_path"] = str(self._py_interp)
+            if "parameters" not in target:
+                target["parameters"] = ""
 
-        pycharm_targets = {}
-        if hasattr(self.conanfile, "_pycharm_targets"):
-            for target in self.conanfile._pycharm_targets:
-                kwarg = target
-                kwarg["envvars"] = envvars
-                kwarg["sdk_path"] = str(self._py_interp)
-                if "parameters" not in kwarg:
-                    kwarg["parameters"] = ""
+            with open(target["jinja_path"], "r") as f:
+                template = Template(f.read())
+                run_configuration = template.render(target)
+                run_configurations[str(Path(self.conanfile.source_folder).joinpath(".run", f"{target['name']}.run.xml"))] = run_configuration
 
-                pycharm_targets[str(Path(self.conanfile.source_folder).joinpath(".run", f"{kwarg['name']}.run.xml"))] = self.run_xml.render(**kwarg)
-
-        return pycharm_targets
+        return run_configurations
