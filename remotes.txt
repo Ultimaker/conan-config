@@ -1,4 +1,2 @@
 cura https://ultimaker.jfrog.io/artifactory/api/conan/cura-internal True
-cura-ce  https://ultimaker.jfrog.io/artifactory/api/conan/cura-community True
-cs-conan-public https://ultimaker.jfrog.io/artifactory/api/conan/cs-conan-public True
 conan-center https://center.conan.io True
