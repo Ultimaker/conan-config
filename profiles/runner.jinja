@@ -1,0 +1,15 @@
+include(cura.jinja)
+
+[build_requires]
+
+[settings]
+
+[options]
+
+[env]
+
+# Ensure backward compatibility with MacOS < 13 https://github.com/Ultimaker/Cura/issues/11841#issuecomment-1685076361
+cpython:ac_cv_func_mkfifoat=no
+cpython:ac_cv_func_mknodat=no
+
+[conf]
