@@ -1,3 +1,4 @@
 cura https://ultimaker.jfrog.io/artifactory/api/conan/cura-internal True
 cura-conan-dev https://cura.jfrog.io/artifactory/api/conan/cura-conan-dev True
+cura-private-conan-dev https://cura.jfrog.io/artifactory/api/conan/cura-private-conan-dev True
 conan-center https://center.conan.io True
