@@ -1,1 +1,1 @@
-cura https://cura.jfrog.io/artifactory/api/conan/cura-conan-dev True
+cura-private https://cura.jfrog.io/artifactory/api/conan/cura-private-conan-dev True
