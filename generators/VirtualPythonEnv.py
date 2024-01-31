@@ -12,7 +12,6 @@ from conans.model import Generator
 from conans.errors import ConanException
 
 
-class VirtualPythonEnv_bk(Generator):
     @property
     def _script_ext(self):
         if self.conanfile.settings.get_safe("os") == "Windows":
