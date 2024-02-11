@@ -1,0 +1,19 @@
+{
+ "remotes": [
+  {
+   "name": "conancenter",
+   "url": "https://center.conan.io",
+   "verify_ssl": true
+  },
+  {
+   "name": "cura",
+   "url": "https://cura.jfrog.io/artifactory/api/conan/cura-conan-dev",
+   "verify_ssl": true
+  },
+  {
+   "name": "cura-private",
+   "url": "https://cura.jfrog.io/artifactory/api/conan/cura-private-conan-dev",
+   "verify_ssl": true
+  }
+ ]
+}
