@@ -13,6 +13,8 @@ from conan.tools.env import VirtualRunEnv
 
 def deploy(graph, output_folder, **kwargs):
     conanfile: ConanFile = graph.root.conanfile
+    if output_folder is None:
+        output_folder = "venv"
 
     bin_venv_path = "Scripts" if conanfile.settings.os == "Windows" else "bin"
 
