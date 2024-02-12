@@ -12,7 +12,10 @@ from conan.tools.env import VirtualRunEnv
 
 
 def deploy(graph, output_folder, **kwargs):
-    conanfile: ConanFile = graph.root.conanfile
+    if graph.root.conanfile.name is None:
+        conanfile: ConanFile = graph.nodes[1].conanfile
+    else:
+        conanfile: ConanFile = graph.root.conanfile
     if output_folder is None:
         output_folder = "venv"
 
@@ -25,10 +28,11 @@ def deploy(graph, output_folder, **kwargs):
     except KeyError:
         py_interp = sys.executable
 
-    run_env = VirtualRunEnv(conanfile)
-    env = run_env.environment()
+    vr = VirtualRunEnv(conanfile)
+    env = vr.environment()
     sys_vars = env.vars(conanfile, scope="run")
 
+    conanfile.output.info(f"Using Python interpreter '{py_interp}' to create Virtual Environment in '{output_folder}'")
     with sys_vars.apply():
         conanfile.run(f"""{py_interp} -m venv --copies {output_folder}""", env="conanrun", scope="run")
 
@@ -59,7 +63,7 @@ def deploy(graph, output_folder, **kwargs):
     env.prepend_path("DYLD_LIBRARY_PATH", os.path.join(output_folder, bin_venv_path))
     env.prepend_path("PYTHONPATH", pythonpath)
     env.unset("PYTHONHOME")
-    venv_vars = env.vars(conanfile, scope="run")
+    venv_vars = env.vars(graph.root.conanfile, scope="run")
     venv_vars.save_script("virtual_python_env")
 
     # Install some base_packages
@@ -67,12 +71,12 @@ def deploy(graph, output_folder, **kwargs):
         conanfile.run(f"""{py_interp_venv} -m pip install wheel setuptools""", env="conanrun")
 
     if conanfile.settings.os != "Windows":
-        content = f"source {os.path.join(output_folder, 'conan', 'virtual_python_env.sh')}\n" + load(conanfile,
+        content = f"source {os.path.join(output_folder, 'conan', 'virtual_python_env.sh')}\n" + load(graph.root.conanfile,
                                                                                                      os.path.join(
                                                                                                          output_folder,
                                                                                                          bin_venv_path,
                                                                                                          "activate"))
-        save(conanfile, os.path.join(output_folder, bin_venv_path, "activate"), content)
+        save(graph.root.conanfile, os.path.join(output_folder, bin_venv_path, "activate"), content)
 
     pip_requirements = {}
     if conanfile.conan_data is not None and "pip_requirements" in conanfile.conan_data:
@@ -81,7 +85,7 @@ def deploy(graph, output_folder, **kwargs):
                 if name not in pip_requirements or Version(pip_requirements[name]["version"]) < Version(req["version"]):
                     pip_requirements[name] = req
 
-    for name, dep in reversed(conanfile.dependencies.host.items()):
+    for name, dep in reversed(graph.root.conanfile.dependencies.host.items()):
         if dep.conan_data is None:
             continue
         if "pip_requirements" in dep.conan_data:
@@ -101,7 +105,7 @@ def deploy(graph, output_folder, **kwargs):
             requirements_txt += f" --hash={hash_str}"
         requirements_txt += "\n"
 
-    save(conanfile, os.path.join(output_folder, 'conan', 'requirements.txt'), requirements_txt)
+    save(graph.root.conanfile, os.path.join(output_folder, 'conan', 'requirements.txt'), requirements_txt)
     with venv_vars.apply():
         conanfile.run(f"{py_interp_venv} -m pip install -r {os.path.join(output_folder, 'conan', 'requirements.txt')}",
                       env="conanrun")
