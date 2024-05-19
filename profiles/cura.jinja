@@ -5,6 +5,7 @@ include(default)
 [settings]
 compiler.cppstd=20
 nest2d:compiler.cppstd=17
+pynest2d:compiler.cppstd=17
 
 {% if compiler == 'gcc' %}compiler.libcxx=libstdc++11
 {% elif compiler == 'apple-clang' %}compiler.libcxx=libc++
