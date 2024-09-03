@@ -6,8 +6,8 @@
    "verify_ssl": true
   },
   {
-   "name": "cura-conan-v2",
-   "url": "https://cura.jfrog.io/artifactory/api/conan/cura-conan-v2-local-dev",
+   "name": "cura-conan2",
+   "url": "https://cura.jfrog.io/artifactory/api/conan/cura-conan2-dev",
    "verify_ssl": true
   }
  ]
