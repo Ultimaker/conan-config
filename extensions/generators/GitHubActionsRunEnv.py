@@ -4,6 +4,7 @@ from jinja2 import Template
 
 from conan import ConanFile
 from conan.tools.env import VirtualRunEnv
+from conan.tools.files import save
 
 
 class GitHubActionsRunEnv:
