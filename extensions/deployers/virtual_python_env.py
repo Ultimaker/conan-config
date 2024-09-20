@@ -80,8 +80,8 @@ def deploy(graph, output_folder, **kwargs):
 
     pip_requirements = {}
     if conanfile.conan_data is not None and "pip_requirements" in conanfile.conan_data:
-        for oses in ("any", str(conanfile.settings.os)):
-            for name, req in conanfile.conan_data["pip_requirements"][oses].items():
+        for system in (system for system in conanfile.conan_data["pip_requirements"] if system in ("any", str(conanfile.settings.os))):
+            for name, req in conanfile.conan_data["pip_requirements"][system].items():
                 if name not in pip_requirements or Version(pip_requirements[name]["version"]) < Version(req["version"]):
                     pip_requirements[name] = req
 
