@@ -105,7 +105,16 @@ def deploy(graph, output_folder, **kwargs):
             requirements_txt += f" --hash={hash_str}"
         requirements_txt += "\n"
 
-    save(graph.root.conanfile, os.path.join(output_folder, 'conan', 'requirements.txt'), requirements_txt)
+    pip_requirements_path = os.path.join(output_folder, 'conan', 'requirements.txt')
+    save(graph.root.conanfile, pip_requirements_path, requirements_txt)
     with venv_vars.apply():
-        conanfile.run(f"{py_interp_venv} -m pip install -r {os.path.join(output_folder, 'conan', 'requirements.txt')}",
+        conanfile.run(f"{py_interp_venv} -m pip install -r {pip_requirements_path}",
                       env="conanrun")
+
+    if conanfile.conf.get("user.deployer.virtual_python_env:dev_tools", default = False, check_type = bool):
+        if "pip_requirements_dev" in conanfile.conan_data:
+            pip_requirements_dev = conanfile.conan_data["pip_requirements_dev"]
+            pip_requirements_dev_path = os.path.join(output_folder, 'conan', 'requirements_dev.txt')
+            save(graph.root.conanfile, pip_requirements_dev_path, '\n'.join(pip_requirements_dev))
+            with venv_vars.apply():
+                conanfile.run(f"{py_interp_venv} -m pip install -r {pip_requirements_dev_path}", env="conanrun")
