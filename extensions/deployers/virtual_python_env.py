@@ -11,21 +11,6 @@ from conan.tools.scm import Version
 from conan.tools.env import VirtualRunEnv
 
 
-def populate_pip_requirements(key, pip_requirements, conan_data, actual_os):
-    if conan_data is not None and key in conan_data:
-        for system in (system for system in conan_data[key] if system in ("any", actual_os)):
-            for name, req in conan_data[key][system].items():
-                if name not in pip_requirements or Version(pip_requirements[name]["version"]) < Version(req["version"]):
-                    pip_requirements[name] = req
-
-
-def populate_full_pip_requirements(conanfile, key, pip_requirements, actual_os):
-    populate_pip_requirements(key, pip_requirements, conanfile.conan_data, actual_os)
-
-    for name, dep in reversed(conanfile.dependencies.host.items()):
-        populate_pip_requirements(key, pip_requirements, dep.conan_data, actual_os)
-
-
 def deploy(graph, output_folder, **kwargs):
     if graph.root.conanfile.name is None:
         conanfile: ConanFile = graph.nodes[1].conanfile
@@ -93,25 +78,31 @@ def deploy(graph, output_folder, **kwargs):
                                                                                                          "activate"))
         save(graph.root.conanfile, os.path.join(output_folder, bin_venv_path, "activate"), content)
 
-    actual_os = str(conanfile.settings.os)
     pip_requirements = {}
+    if conanfile.conan_data is not None and "pip_requirements" in conanfile.conan_data:
+        for system in (system for system in conanfile.conan_data["pip_requirements"] if system in ("any", str(conanfile.settings.os))):
+            for name, req in conanfile.conan_data["pip_requirements"][system].items():
+                if name not in pip_requirements or Version(pip_requirements[name]["version"]) < Version(req["version"]):
+                    pip_requirements[name] = req
 
-    populate_full_pip_requirements(conanfile, "pip_requirements", pip_requirements, actual_os)
-
-    if conanfile.conf.get("user.deployer.virtual_python_env:dev_tools", default = False, check_type = bool):
-        populate_full_pip_requirements(conanfile, "pip_requirements_dev", pip_requirements, actual_os)
+    for name, dep in reversed(graph.root.conanfile.dependencies.host.items()):
+        if dep.conan_data is None:
+            continue
+        if "pip_requirements" in dep.conan_data:
+            for oses in ("any", str(conanfile.settings.os)):
+                for name, req in conanfile.conan_data["pip_requirements"][oses].items():
+                    if name not in pip_requirements or Version(pip_requirements[name]["version"]) < Version(
+                            req["version"]):
+                        pip_requirements[name] = req
 
     requirements_txt = ""
     for name, req in pip_requirements.items():
         if "url" in req:
             requirements_txt += f"{req['url']}"
-        elif 'version':
+        else:
             requirements_txt += f"{name}=={req['version']}"
-
-        if 'hashes' in req:
-            for hash_str in req['hashes']:
-                requirements_txt += f" --hash={hash_str}"
-
+        for hash_str in req['hashes']:
+            requirements_txt += f" --hash={hash_str}"
         requirements_txt += "\n"
 
     save(graph.root.conanfile, os.path.join(output_folder, 'conan', 'requirements.txt'), requirements_txt)
