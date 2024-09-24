@@ -23,3 +23,12 @@ boost/*:header_only=True
 {% if platform.system() == 'Linux' %}
 openssl/*:shared=True
 {% endif %}
+pyarcus/*:shared=True
+pysavitar/*:shared=True
+pynest2d/*:shared=True
+cpython/*:shared=True
+{% if platform.system() == 'Windows' %}
+dulcificum/*:shared=False
+{% else %}
+dulcificum/*:shared=True
+{% endif %}
