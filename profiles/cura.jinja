@@ -20,3 +20,6 @@ grpc/*:php_plugin=False
 grpc/*:ruby_plugin=False
 grpc/*:python_plugin=False
 boost/*:header_only=True
+{% if platform.system() == 'Linux' %}
+openssl/*:shared=True
+{% endif %}
