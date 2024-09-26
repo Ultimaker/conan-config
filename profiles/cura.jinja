@@ -27,6 +27,8 @@ pyarcus/*:shared=True
 pysavitar/*:shared=True
 pynest2d/*:shared=True
 cpython/*:shared=True
+cpython/*:with_tkinter=False
+cpython/*:with_curses=False
 {% if platform.system() == 'Windows' %}
 dulcificum/*:shared=False
 {% else %}
