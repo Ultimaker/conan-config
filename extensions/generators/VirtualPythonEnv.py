@@ -56,9 +56,7 @@ class VirtualPythonEnv:
         env.prepend_path("DYLD_LIBRARY_PATH", os.path.join(output_folder, bin_venv_path))
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
-
-        filepath = str(Path(self.conanfile.generators_folder).joinpath("supercoucou_runenv"))
-        env_vars.save_script(filepath)
+        env_vars.save_script("virtual_python_env")
 
         # Install some base_packages
         with env_vars.apply():
@@ -95,13 +93,11 @@ class VirtualPythonEnv:
         if self.conanfile.conf.get("user.generator.virtual_python_env:dev_tools", default = False, check_type = bool):
             pip_requirements_dev = []
             self._populate_pip_requirements_dev(self.conanfile, pip_requirements_dev)
-            print(pip_requirements_dev)
             self._install_pip_requirements("dev", pip_requirements_dev, output_folder, env_vars, py_interp_venv)
 
 
     def _populate_pip_requirements_dev(self, conanfile, pip_requirements_dev, add_dependencies = True):
         if hasattr(conanfile, "conan_data") and "pip_requirements_dev" in conanfile.conan_data:
-            print(conanfile.conan_data["pip_requirements_dev"])
             pip_requirements_dev += conanfile.conan_data["pip_requirements_dev"]
 
         if add_dependencies:
