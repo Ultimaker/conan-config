@@ -21,7 +21,7 @@ class VirtualPythonEnv:
         Creates a Python venv using the CPython installed by conan, then create a script so that this venv can be easily used
         in Conan commands, and finally install the pip dependencies declared in the conanfile data
         '''
-        output_folder = "venv"
+        venv_name = f"{self.conanfile.name}_venv"
         bin_venv_path = "Scripts" if self.conanfile.settings.os == "Windows" else "bin"
 
         # Check if CPython is added as a dependency use the Conan recipe if available; if not use system interpreter
@@ -35,22 +35,21 @@ class VirtualPythonEnv:
         env = run_env.environment()
         env_vars = env.vars(self.conanfile, scope="run")
 
-        base_folder = self.conanfile.conf.get("user.generator.virtual_python_env:base_folder", default = "", check_type = str)
-        output_folder = os.path.join(base_folder if len(base_folder) > 0 else os.getcwd(), output_folder)
+        venv_folder = os.path.abspath(venv_name)
 
-        self.conanfile.output.info(f"Using Python interpreter '{py_interp}' to create Virtual Environment in '{output_folder}'")
+        self.conanfile.output.info(f"Using Python interpreter '{py_interp}' to create Virtual Environment in '{venv_folder}'")
         with env_vars.apply():
-            subprocess.run([py_interp, "-m", "venv", "--copies", output_folder])
+            subprocess.run([py_interp, "-m", "venv", "--copies", venv_folder])
 
         # Make sure there executable is named the same on all three OSes this allows it to be called with `python`
         # simplifying GH Actions steps
         if self.conanfile.settings.os != "Windows":
-            py_interp_venv = Path(output_folder, bin_venv_path, "python")
+            py_interp_venv = Path(venv_folder, bin_venv_path, "python")
             if not py_interp_venv.exists():
                 py_interp_venv.hardlink_to(
-                    Path(output_folder, bin_venv_path, Path(sys.executable).stem + Path(sys.executable).suffix))
+                    Path(venv_folder, bin_venv_path, Path(sys.executable).stem + Path(sys.executable).suffix))
         else:
-            py_interp_venv = Path(output_folder, bin_venv_path,
+            py_interp_venv = Path(venv_folder, bin_venv_path,
                                 Path(sys.executable).stem + Path(sys.executable).suffix)
 
         # Generate a script that mimics the venv activate script but is callable easily in Conan commands
@@ -58,15 +57,15 @@ class VirtualPythonEnv:
             buffer = subprocess.run([py_interp_venv, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], capture_output=True, encoding="utf-8").stdout
         pythonpath = buffer.splitlines()[-1]
 
-        env.define_path("VIRTUAL_ENV", output_folder)
-        env.prepend_path("PATH", os.path.join(output_folder, bin_venv_path))
-        env.prepend_path("LD_LIBRARY_PATH", os.path.join(output_folder, bin_venv_path))
-        env.prepend_path("DYLD_LIBRARY_PATH", os.path.join(output_folder, bin_venv_path))
+        env.define_path("VIRTUAL_ENV", venv_folder)
+        env.prepend_path("PATH", os.path.join(venv_folder, bin_venv_path))
+        env.prepend_path("LD_LIBRARY_PATH", os.path.join(venv_folder, bin_venv_path))
+        env.prepend_path("DYLD_LIBRARY_PATH", os.path.join(venv_folder, bin_venv_path))
         env.prepend_path("PYTHONPATH", pythonpath)
         env.unset("PYTHONHOME")
         env_vars.save_script("virtual_python_env")
 
-        # Install some base_packages
+        # Install some base packages
         with env_vars.apply():
             subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"])
 
@@ -78,64 +77,88 @@ class VirtualPythonEnv:
         #                                                                                                     "activate"))
         #     save(self.conanfile, os.path.join(output_folder, bin_venv_path, "activate"), content)
 
-        pip_requirements = {}
-        self._populate_pip_requirements(self.conanfile, "pip_requirements", pip_requirements, str(self.conanfile.settings.os))
+        requirements_base = self._make_pip_requirements_files()
+        requirements_dev = self._make_pip_requirements_files("dev")
+        requirements_installer = self._make_pip_requirements_files("installer")
 
-        requirements_hashed_txt = []
-        requirements_url_txt = []
-        for name, req in pip_requirements.items():
-            if "url" in req:
-                requirements_url_txt.append(req['url'])
+        self._install_pip_requirements(requirements_base, env_vars, py_interp_venv)
+
+        if self.conanfile.conf.get("user.generator.virtual_python_env:dev_tools", default=False, check_type=bool):
+            self._install_pip_requirements(requirements_dev, env_vars, py_interp_venv)
+
+        if self.conanfile.conf.get("user.generator.virtual_python_env:installer_tools", default=False,
+                                       check_type=bool):
+            self._install_pip_requirements(requirements_installer, env_vars, py_interp_venv)
+
+    def _install_pip_requirements(self, files_paths, env_vars, py_interp_venv):
+        with env_vars.apply():
+            for file_path in files_paths:
+                self.conanfile.output.info(f"Installing pip requirements from {file_path}")
+                subprocess.run([py_interp_venv, "-m", "pip", "install", "-r", file_path])
+
+
+    def _make_pip_requirements_files(self, suffix = None):
+        actual_os = str(self.conanfile.settings.os)
+
+        pip_requirements = VirtualPythonEnv._populate_pip_requirements(self.conanfile, suffix, actual_os)
+
+        for _, dependency in reversed(self.conanfile.dependencies.host.items()):
+            pip_requirements |= VirtualPythonEnv._populate_pip_requirements(dependency, suffix, actual_os)
+
+        # We need to make separate files because pip accepts either files containing hashes for all or none of the packages
+        requirements_basic_txt = []
+        requirements_hashes_txt = []
+
+        for package_name, package_desc in pip_requirements.items():
+            package_requirement = package_name + (f"=={package_desc['version']}" if "version" in package_desc else "")
+
+            if "hashes" in package_desc:
+                package_requirement_with_hashes = [package_requirement]
+                for hash_str in package_desc['hashes']:
+                    package_requirement_with_hashes.append(f"--hash={hash_str}")
+                requirements_hashes_txt.append(" ".join(package_requirement_with_hashes))
+
+            if "url" in package_desc:
+                requirements_basic_txt.append(package_desc['url'])
             else:
-                requirement_txt = [f"{name}=={req['version']}"]
+                requirements_basic_txt.append(package_requirement)
 
-                if "hashes" in req:
-                    for hash_str in req['hashes']:
-                        requirement_txt.append(f"--hash={hash_str}")
+        generated_files = []
+        self._make_pip_requirements_file(requirements_basic_txt, "basic", suffix, generated_files)
+        self._make_pip_requirements_file(requirements_hashes_txt, "hashes", suffix, generated_files)
 
-                requirements_hashed_txt.append(" ".join(requirement_txt))
-
-        self._install_pip_requirements("hashed", requirements_hashed_txt, output_folder, env_vars, py_interp_venv)
-        self._install_pip_requirements("url", requirements_url_txt, output_folder, env_vars, py_interp_venv)
-
-        if self.conanfile.conf.get("user.generator.virtual_python_env:dev_tools", default = False, check_type = bool):
-            self._populate_and_install_pip_requirements_list("dev", output_folder, env_vars, py_interp_venv)
-
-        if self.conanfile.conf.get("user.generator.virtual_python_env:installer_tools", default = False, check_type = bool):
-            self._populate_and_install_pip_requirements_list("installer", output_folder, env_vars, py_interp_venv)
+        return generated_files
 
 
-    def _populate_and_install_pip_requirements_list(self, suffix, output_folder, env_vars, py_interp_venv):
-        pip_requirements_list = []
-        self._populate_pip_requirements_list(self.conanfile, pip_requirements_list, suffix)
-        self._install_pip_requirements(suffix, pip_requirements_list, output_folder, env_vars, py_interp_venv)
+    def _make_pip_requirements_file(self, requirements_txt, requirements_type, suffix, generated_files):
+        if len(requirements_txt) > 0:
+            file_suffixes = [file_suffix for file_suffix in [suffix, requirements_type] if file_suffix is not None]
+            file_basename = "_".join(["pip", "requirements"] + file_suffixes)
+            file_path = os.path.abspath(f"{file_basename}.txt")
+            self.conanfile.output.info(f"Generating pip requirements file at '{file_path}'")
+            save(self.conanfile, file_path, "\n".join(requirements_txt))
+            generated_files.append(file_path)
 
 
-    def _populate_pip_requirements_list(self, conanfile, pip_requirements_list, suffix, add_dependencies = True):
-        attribute_name = f"pip_requirements_{suffix}"
-        if hasattr(conanfile, "conan_data") and attribute_name in conanfile.conan_data:
-            pip_requirements_list += conanfile.conan_data[attribute_name]
+    @staticmethod
+    def _populate_pip_requirements(conanfile, suffix, actual_os):
+        pip_requirements = {}
+        data_key = "pip_requirements" + (f"_{suffix}" if suffix is not None else "")
 
-        if add_dependencies:
-            for name, dep in reversed(self.conanfile.dependencies.host.items()):
-                self._populate_pip_requirements_list(dep, pip_requirements_list, suffix, add_dependencies = False)
+        if hasattr(conanfile, "conan_data") and data_key in conanfile.conan_data:
+            pip_requirements_data = conanfile.conan_data[data_key]
+            for system in (system for system in pip_requirements_data if system in ("any_os", actual_os)):
+                for package_name, package_desc in pip_requirements_data[system].items():
 
+                    try:
+                        actual_package_version = Version(pip_requirements[package_name]["version"])
+                    except KeyError:
+                        actual_package_version = None
 
-    def _populate_pip_requirements(self, conanfile, key, pip_requirements, actual_os, add_dependencies = True):
-        if hasattr(conanfile, "conan_data") and key in conanfile.conan_data:
-            for system in (system for system in conanfile.conan_data[key] if system in ("any", actual_os)):
-                for name, req in conanfile.conan_data[key][system].items():
-                    if name not in pip_requirements or Version(pip_requirements[name]["version"]) < Version(req["version"]):
-                        pip_requirements[name] = req
+                    new_package_version = Version(package_desc["version"]) if "version" in package_desc else None
 
-        if add_dependencies:
-            for name, dep in reversed(self.conanfile.dependencies.host.items()):
-                self._populate_pip_requirements(dep, key, pip_requirements, actual_os, add_dependencies = False)
+                    if (actual_package_version is None or
+                            (actual_package_version is not None and new_package_version is not None and new_package_version > actual_package_version)):
+                        pip_requirements[package_name] = package_desc
 
-
-    def _install_pip_requirements(self, file_suffix, file_content, output_folder, env_vars, py_interp_venv):
-        if len(file_content) > 0:
-            pip_file_path = os.path.join(output_folder, 'conan', f'requirements_{file_suffix}.txt')
-            save(self.conanfile, pip_file_path, "\n".join(file_content))
-            with env_vars.apply():
-                subprocess.run([py_interp_venv, "-m", "pip", "install", "-r", pip_file_path])
+        return pip_requirements
