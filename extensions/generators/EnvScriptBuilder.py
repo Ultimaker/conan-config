@@ -1,5 +1,6 @@
 from conan.tools.files import save
 
+#FIXME Unused for now, remove it if still unused
 class EnvScriptBuilder:
     def __init__(self):
         self._variables = {}
