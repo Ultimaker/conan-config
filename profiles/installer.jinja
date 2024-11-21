@@ -1,0 +1,14 @@
+include(cura_build)
+
+[conf]
+tools.build:skip_test=True
+
+[options]
+curaengine/*:enable_sentry=True
+arcus/*:enable_sentry=True
+clipper/*:enable_sentry=True
+
+[settings]
+curaengine/*:build_type=RelWithDebInfo
+arcus/*:build_type=RelWithDebInfo -s
+clipper/*:build_type=RelWithDebInfo
