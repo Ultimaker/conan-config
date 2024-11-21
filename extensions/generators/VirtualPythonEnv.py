@@ -77,11 +77,11 @@ class VirtualPythonEnv:
         #                                                                                                     "activate"))
         #     save(self.conanfile, os.path.join(output_folder, bin_venv_path, "activate"), content)
 
-        requirements_base = self._make_pip_requirements_files()
+        requirements_core = self._make_pip_requirements_files("core")
         requirements_dev = self._make_pip_requirements_files("dev")
         requirements_installer = self._make_pip_requirements_files("installer")
 
-        self._install_pip_requirements(requirements_base, env_vars, py_interp_venv)
+        self._install_pip_requirements(requirements_core, env_vars, py_interp_venv)
 
         if self.conanfile.conf.get("user.generator.virtual_python_env:dev_tools", default=False, check_type=bool):
             self._install_pip_requirements(requirements_dev, env_vars, py_interp_venv)
@@ -97,7 +97,7 @@ class VirtualPythonEnv:
                 subprocess.run([py_interp_venv, "-m", "pip", "install", "-r", file_path])
 
 
-    def _make_pip_requirements_files(self, suffix = None):
+    def _make_pip_requirements_files(self, suffix):
         actual_os = str(self.conanfile.settings.os)
 
         pip_requirements = VirtualPythonEnv._populate_pip_requirements(self.conanfile, suffix, actual_os)
@@ -133,8 +133,7 @@ class VirtualPythonEnv:
     def _make_pip_requirements_file(self, requirements_txt, requirements_type, suffix, generated_files):
         if len(requirements_txt) > 0:
             file_suffixes = [file_suffix for file_suffix in [suffix, requirements_type] if file_suffix is not None]
-            file_basename = "_".join(["pip", "requirements"] + file_suffixes)
-            file_path = os.path.abspath(f"{file_basename}.txt")
+            file_path = os.path.abspath(f"pip_requirements_{suffix}_{requirements_type}.txt")
             self.conanfile.output.info(f"Generating pip requirements file at '{file_path}'")
             save(self.conanfile, file_path, "\n".join(requirements_txt))
             generated_files.append(file_path)
@@ -143,7 +142,7 @@ class VirtualPythonEnv:
     @staticmethod
     def _populate_pip_requirements(conanfile, suffix, actual_os):
         pip_requirements = {}
-        data_key = "pip_requirements" + (f"_{suffix}" if suffix is not None else "")
+        data_key = f"pip_requirements_{suffix}"
 
         if hasattr(conanfile, "conan_data") and data_key in conanfile.conan_data:
             pip_requirements_data = conanfile.conan_data[data_key]
