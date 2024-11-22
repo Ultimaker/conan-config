@@ -8,11 +8,11 @@ user.sentry:organization=ultimaker-o7
 [options]
 curaengine/*:enable_sentry=True
 arcus/*:enable_sentry=True
+arcus/*:sentry_project=curaengine
 clipper/*:enable_sentry=True
+clipper/*:sentry_project=curaengine
 
 [settings]
 curaengine/*:build_type=RelWithDebInfo
 arcus/*:build_type=RelWithDebInfo
 clipper/*:build_type=RelWithDebInfo
-arcus/*:sentry_project=curaengine
-clipper/*:sentry_project=curaengine
