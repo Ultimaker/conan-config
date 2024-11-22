@@ -2,6 +2,8 @@ include(cura.jinja)
 
 [conf]
 tools.build:skip_test=True
+user.sentry:url=https://734f9ec9024f73e53701d59c3ffddfe3@o323038.ingest.sentry.io/4506257745510401
+user.sentry:organization=ultimaker-o7
 
 [options]
 curaengine/*:enable_sentry=True
@@ -12,3 +14,5 @@ clipper/*:enable_sentry=True
 curaengine/*:build_type=RelWithDebInfo
 arcus/*:build_type=RelWithDebInfo
 clipper/*:build_type=RelWithDebInfo
+arcus/*:sentry_project=curaengine
+clipper/*:sentry_project=curaengine
