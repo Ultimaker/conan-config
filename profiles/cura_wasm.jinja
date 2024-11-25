@@ -11,6 +11,7 @@ arch=wasm
 
 [conf]
 tools.build:skip_test=True
+tools.build:cxxflags=["-matomics","-mbulk-memory"]
 
 [options]
 curaengine:enable_plugins=False
