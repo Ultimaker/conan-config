@@ -7,10 +7,13 @@ user.sentry:organization=ultimaker-o7
 
 [options]
 curaengine/*:enable_sentry=True
+curaengine/*:sentry_send_binaries=True
 curaengine/*:sentry_create_release=True
 arcus/*:enable_sentry=True
+arcus/*:sentry_send_binaries=True
 arcus/*:sentry_project=curaengine
 clipper/*:enable_sentry=True
+clipper/*:sentry_send_binaries=True
 clipper/*:sentry_project=curaengine
 
 [settings]
