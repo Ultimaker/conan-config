@@ -39,7 +39,7 @@ class VirtualPythonEnv:
 
         self.conanfile.output.info(f"Using Python interpreter '{py_interp}' to create Virtual Environment in '{venv_folder}'")
         with env_vars.apply():
-            subprocess.run([py_interp, "-m", "venv", "--copies", venv_folder])
+            subprocess.run([py_interp, "-m", "venv", "--copies", venv_folder], check=True)
 
         # Make sure there executable is named the same on all three OSes this allows it to be called with `python`
         # simplifying GH Actions steps
@@ -54,7 +54,7 @@ class VirtualPythonEnv:
 
         # Generate a script that mimics the venv activate script but is callable easily in Conan commands
         with env_vars.apply():
-            buffer = subprocess.run([py_interp_venv, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], capture_output=True, encoding="utf-8").stdout
+            buffer = subprocess.run([py_interp_venv, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], capture_output=True, encoding="utf-8", check=True).stdout
         pythonpath = buffer.splitlines()[-1]
 
         env.define_path("VIRTUAL_ENV", venv_folder)
@@ -67,7 +67,7 @@ class VirtualPythonEnv:
 
         # Install some base packages
         with env_vars.apply():
-            subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"])
+            subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"], check=True)
 
         # if self.conanfile.settings.os != "Windows":
         #     content = f"source {os.path.join(output_folder, 'conan', 'virtual_python_env.sh')}\n" + load(self.conanfile,
@@ -94,7 +94,7 @@ class VirtualPythonEnv:
         with env_vars.apply():
             for file_path in files_paths:
                 self.conanfile.output.info(f"Installing pip requirements from {file_path}")
-                subprocess.run([py_interp_venv, "-m", "pip", "install", "-r", file_path])
+                subprocess.run([py_interp_venv, "-m", "pip", "install", "-r", file_path], check=True)
 
 
     def _make_pip_requirements_files(self, suffix):
