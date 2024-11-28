@@ -1,5 +1,10 @@
 include(default)
 
+[conf]
+{% if platform.system() == 'Windows' %}
+tools.env.virtualenv:powershell=True
+{% endif %}
+
 [settings]
 compiler.cppstd=17
 curaengine*:compiler.cppstd=20
@@ -10,9 +15,6 @@ scripta*:compiler.cppstd=20
 umspatial*:compiler.cppstd=20
 dulcificum*:compiler.cppstd=20
 cura_settings*:compiler.cppstd=20
-{% if platform.system() == 'Windows' %}
-tools.env.virtualenv:powershell=True
-{% endif %}
 
 [options]
 asio-grpc/*:local_allocator=recycling_allocator
