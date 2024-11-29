@@ -67,6 +67,7 @@ class VirtualPythonEnv:
 
         # Install some base packages
         with env_vars.apply():
+            subprocess.run([py_interp_venv, "-m", "pip", "install", "--upgrade", "pip"], check=True)
             subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"], check=True)
 
         # if self.conanfile.settings.os != "Windows":
@@ -114,7 +115,7 @@ class VirtualPythonEnv:
             packages_hashes = []
 
             if "url" in package_desc:
-                package_requirement = package_desc["url"]
+                package_requirement = f"{package_name}@{package_desc['url']}"
             elif "version" in package_desc:
                 package_requirement = f"{package_name}=={package_desc['version']}"
             else:
