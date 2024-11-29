@@ -1,9 +1,7 @@
 include(default)
 
 [conf]
-{% if platform.system() == 'Windows' %}
-tools.env.virtualenv:powershell=True
-{% endif %}
+cpython/*:tools.env.virtualenv:powershell=False
 
 [settings]
 compiler.cppstd=17
