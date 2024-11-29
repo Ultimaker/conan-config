@@ -110,18 +110,22 @@ class VirtualPythonEnv:
         requirements_hashes_txt = []
 
         for package_name, package_desc in pip_requirements.items():
-            package_requirement = package_name + (f"=={package_desc['version']}" if "version" in package_desc else "")
-
-            if "hashes" in package_desc:
-                package_requirement_with_hashes = [package_requirement]
-                for hash_str in package_desc['hashes']:
-                    package_requirement_with_hashes.append(f"--hash={hash_str}")
-                requirements_hashes_txt.append(" ".join(package_requirement_with_hashes))
+            package_requirement = ""
+            packages_hashes = []
 
             if "url" in package_desc:
-                requirements_basic_txt.append(package_desc['url'])
+                package_requirement = package_desc["url"]
+            elif "version" in package_desc:
+                package_requirement = f"{package_name}=={package_desc['version']}"
             else:
-                requirements_basic_txt.append(package_requirement)
+                package_requirement = package_name
+
+            if "hashes" in package_desc:
+                for hash_str in package_desc["hashes"]:
+                    packages_hashes.append(f"--hash={hash_str}")
+
+            destination_file = requirements_hashes_txt if len(packages_hashes) > 0 else requirements_basic_txt
+            destination_file.append(' '.join([package_requirement] + packages_hashes))
 
         generated_files = []
         self._make_pip_requirements_file(requirements_basic_txt, "basic", suffix, generated_files)
