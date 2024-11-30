@@ -1,0 +1,13 @@
+include(cura.jinja)
+
+[tool_requires]
+
+[settings]
+compiler=clang
+compiler.version=18
+compiler.libcxx=libstdc++11
+
+[options]
+
+[conf]
+tools.build:compiler_executables={"c":"clang", "cpp":"clang++"}
