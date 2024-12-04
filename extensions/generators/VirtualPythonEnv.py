@@ -70,14 +70,6 @@ class VirtualPythonEnv:
             subprocess.run([py_interp_venv, "-m", "pip", "install", "--upgrade", "pip"], check=True)
             subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"], check=True)
 
-        # if self.conanfile.settings.os != "Windows":
-        #     content = f"source {os.path.join(output_folder, 'conan', 'virtual_python_env.sh')}\n" + load(self.conanfile,
-        #                                                                                                 os.path.join(
-        #                                                                                                     output_folder,
-        #                                                                                                     bin_venv_path,
-        #                                                                                                     "activate"))
-        #     save(self.conanfile, os.path.join(output_folder, bin_venv_path, "activate"), content)
-
         requirements_core = self._make_pip_requirements_files("core")
         requirements_dev = self._make_pip_requirements_files("dev")
         requirements_installer = self._make_pip_requirements_files("installer")
