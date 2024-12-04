@@ -1,7 +1,6 @@
 include(cura.jinja)
 
 [tool_requires]
-# change to main once merged https://github.com/Ultimaker/conan-ultimaker-index/pull/14
 emsdk/3.1.65@ultimaker/stable
 nodejs/20.16.0@ultimaker/stable
 
@@ -13,5 +12,8 @@ arch=wasm
 tools.build:skip_test=True
 
 [options]
-curaengine:enable_plugins=False
-curaengine:enable_arcus=False
+curaengine/*:enable_plugins=False
+curaengine/*:enable_arcus=False
+curator/*:with_cura_resources=True
+curator/*:disable_logging=True
+libzip/*:crypto=False
