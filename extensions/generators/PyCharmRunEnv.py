@@ -15,7 +15,8 @@ class PyCharmRunEnv:
 
     @property
     def _base_dir(self):
-        return Path("$PROJECT_DIR$", "venv")
+        venv_name = f"{self.conanfile.name}_venv"
+        return Path("$PROJECT_DIR$", "build", "generators", venv_name)
 
     @property
     def _py_interp(self):
@@ -47,6 +48,8 @@ class PyCharmRunEnv:
                 env.compose_env(project_run_env)  # TODO: Add logic for dependencies
 
         # Create Pycharm run configuration from template for each target
+        run_folder = Path(self.conanfile.source_folder, ".run")
+        self.conanfile.output.info(f"Generating pycharm run targets in '{run_folder}'")
         for target in self.conanfile.conan_data["pycharm_targets"]:
             target["env_vars"] = env.vars(self.conanfile, scope="run")
             target["sdk_path"] = str(self._py_interp)
@@ -56,4 +59,4 @@ class PyCharmRunEnv:
             with open(Path(self.conanfile.source_folder, target["jinja_path"]), "r") as f:
                 template = Template(f.read())
                 run_configuration = template.render(target)
-                save(self.conanfile, Path(".run", f"{target['name']}.run.xml"), run_configuration)
+                save(self.conanfile, Path(run_folder, f"{target['name']}.run.xml"), run_configuration)
