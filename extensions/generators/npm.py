@@ -15,13 +15,11 @@ class npm:
             return
 
         root_package = [dep for dep in self._conanfile.dependencies.direct_host.values()][0]
-        dist_path = Path(self._conanfile.generators_folder, "dist")
-        mkdir(self._conanfile, str(dist_path))
 
         # Copy the *.js and *.d.ts
-        copy(self._conanfile, "*.js", src=root_package.package_folder, dst=str(dist_path))
-        copy(self._conanfile, "*.d.ts", src=root_package.package_folder, dst=str(dist_path))
+        copy(self._conanfile, "*.js", src=root_package.package_folder, dst=self._conanfile.generators_folder)
+        copy(self._conanfile, "*.d.ts", src=root_package.package_folder, dst=self._conanfile.generators_folder)
 
         # Create the package.json
-        save(self._conanfile, str(Path(dist_path.parent, "package.json")),
+        save(self._conanfile, str(Path(self._conanfile.generators_folder, "package.json")),
              json.dumps(root_package.conf_info.get(f"user.{root_package.ref.name.lower()}:package_json")))
