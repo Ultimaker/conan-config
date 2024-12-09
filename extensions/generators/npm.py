@@ -23,3 +23,7 @@ class npm:
         # Create the package.json
         save(self._conanfile, str(Path(self._conanfile.generators_folder, "package.json")),
              json.dumps(root_package.conf_info.get(f"user.{root_package.ref.name.lower()}:package_json")))
+
+        # Create the .npmrc file
+        save(self._conanfile, str(Path(self._conanfile.generators_folder, ".npmrc")),
+             "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}\n@ultimaker:registry=https://npm.pkg.github.com\nalways-auth=true")
