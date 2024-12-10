@@ -3,6 +3,7 @@ include(cura.jinja)
 [tool_requires]
 emsdk/3.1.65@ultimaker/stable
 nodejs/20.16.0@ultimaker/stable
+curator/[>=0.5.0-beta.1]@ultimaker/np_637
 
 [settings]
 os=Emscripten
@@ -11,10 +12,10 @@ arch=wasm
 [conf]
 tools.build:skip_test=True
 tools.cmake.cmake_layout:build_folder_vars=['settings.os']
-{% if os.getenv('CI') == 'true' %}
-user.curator:resource_path="{% os.getenv('GITHUB_WORKSPACE') %}/resources"
-user.curator:fdm_materials_path="{% os.getenv('GITHUB_WORKSPACE') %}/resources"
-{% endif %}
+{#{% if os.getenv('CI') == 'true' %}#}
+{#user.curator:resource_path="{% os.getenv('GITHUB_WORKSPACE') %}/resources"#}
+{#user.curator:fdm_materials_path="{% os.getenv('GITHUB_WORKSPACE') %}/resources"#}
+{#{% endif %}#}
 
 [options]
 curaengine/*:enable_plugins=False
