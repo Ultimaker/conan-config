@@ -1,13 +1,10 @@
 include(cura.jinja)
-
-[tool_requires]
+{% set compiler, version, compiler_exe = detect_api.detect_clang_compiler(compiler_exe="clang") %}
 
 [settings]
-compiler=clang
-compiler.version=18
+compiler={{ compiler }}
+compiler.version={{ version.major }}
 compiler.libcxx=libstdc++11
 
-[options]
-
 [conf]
-tools.build:compiler_executables={"c":"clang", "cpp":"clang++"}
+tools.build:compiler_executables={"c":"{{ compiler_exe }}", "cpp":"{{ compiler_exe }}++"}
