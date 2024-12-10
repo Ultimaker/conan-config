@@ -1,7 +1,8 @@
 import json
 
 from conan import ConanFile
-from conan.tools.files import copy, mkdir, save
+from conan.errors import ConanException
+from conan.tools.files import copy, save
 from pathlib import Path
 
 
@@ -12,7 +13,7 @@ class npm:
     def generate(self):
         if self._conanfile.settings.os != "Emscripten":
             self._conanfile.output.error("Can only deploy to NPM when build for Emscripten")
-            return
+            raise ConanException("Can only deploy to NPM when build for Emscripten")
 
         root_package = [dep for dep in self._conanfile.dependencies.direct_host.values()][0]
 
