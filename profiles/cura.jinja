@@ -1,5 +1,13 @@
 include(default)
 
+[replace_requires]
+{% if platform.system() == 'Linux' %}
+# FIXME: once gRPC is updated to 1.67.0 or higher
+# Using 255.10 or higher https://github.com/conan-io/conan-center-index/issues/24889
+# https://github.com/conan-io/conan-center-index/blob/879e140d9438ab491aceea766d0cf0ae3595dae8/recipes/grpc/all/conanfile.py#L122
+libsystemd/*: libsystemd/[>=255.10]
+{% endif %}
+
 [settings]
 compiler.cppstd=17
 curaengine*:compiler.cppstd=20
@@ -9,7 +17,7 @@ curaengine_grpc_definitions*:compiler.cppstd=20
 scripta*:compiler.cppstd=20
 umspatial*:compiler.cppstd=20
 dulcificum*:compiler.cppstd=20
-curator*:compiler.cppstd=20
+curator/*:compiler.cppstd=20
 
 [options]
 asio-grpc/*:local_allocator=recycling_allocator
