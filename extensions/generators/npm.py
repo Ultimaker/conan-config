@@ -35,5 +35,5 @@ class npm:
         else:  # We're generating a package for a development environment
             package_json = self._conanfile.python_requires["npmpackage"].module.generate_package_json(self._conanfile,
                 os.path.join(self._conanfile.cpp.build.bindirs[0], self._conanfile.cpp.build.bin[0]))
-        save(self._conanfile, str(Path(self._conanfile.build_folder, "package.json")),
+            save(self._conanfile, str(Path(self._conanfile.build_folder, "package.json")),
              json.dumps(package_json))
