@@ -18,5 +18,10 @@ clipper/*:sentry_project=curaengine
 
 [settings]
 curaengine/*:build_type=RelWithDebInfo
+{% if platform.system() == 'Windows' %}
+# FIXME: Resolve Arcus null reference caused by MSVC 19.40
+# https://github.com/microsoft/STL/releases/tag/vs-2022-17.10
+arcus/*:compiler.version=193
+{% endif %}
 arcus/*:build_type=RelWithDebInfo
 clipper/*:build_type=RelWithDebInfo
