@@ -1,5 +1,6 @@
 import os
 import sys
+import yaml
 from io import StringIO
 from shutil import which
 from pathlib import Path
@@ -70,9 +71,13 @@ class VirtualPythonEnv:
             subprocess.run([py_interp_venv, "-m", "pip", "install", "--upgrade", "pip"], check=True)
             subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"], check=True)
 
-        requirements_core = self._make_pip_requirements_files("core")
-        requirements_dev = self._make_pip_requirements_files("dev")
-        requirements_installer = self._make_pip_requirements_files("installer")
+        requirements_summary = {}
+
+        requirements_core = self._make_pip_requirements_files("core", requirements_summary)
+        requirements_dev = self._make_pip_requirements_files("dev", requirements_summary)
+        requirements_installer = self._make_pip_requirements_files("installer", requirements_summary)
+
+        self._export_requirements_summary(requirements_summary)
 
         self._install_pip_requirements(requirements_core, env_vars, py_interp_venv)
 
@@ -83,6 +88,11 @@ class VirtualPythonEnv:
                                        check_type=bool):
             self._install_pip_requirements(requirements_installer, env_vars, py_interp_venv)
 
+    def _export_requirements_summary(self, requirements_summary):
+        file_path = os.path.abspath("pip_requirements_summary.yml")
+        self.conanfile.output.info(f"Generating pip requirements summary at '{file_path}'")
+        save(self.conanfile, file_path, yaml.dump(requirements_summary, default_flow_style=False))
+
     def _install_pip_requirements(self, files_paths, env_vars, py_interp_venv):
         with env_vars.apply():
             for file_path in files_paths:
@@ -90,13 +100,13 @@ class VirtualPythonEnv:
                 subprocess.run([py_interp_venv, "-m", "pip", "install", "-r", file_path], check=True)
 
 
-    def _make_pip_requirements_files(self, suffix):
+    def _make_pip_requirements_files(self, suffix, requirements_summary):
         actual_os = str(self.conanfile.settings.os)
 
-        pip_requirements = VirtualPythonEnv._populate_pip_requirements(self.conanfile, suffix, actual_os)
+        pip_requirements = VirtualPythonEnv._populate_pip_requirements(self.conanfile, suffix, actual_os, requirements_summary)
 
         for _, dependency in reversed(self.conanfile.dependencies.host.items()):
-            pip_requirements |= VirtualPythonEnv._populate_pip_requirements(dependency, suffix, actual_os)
+            pip_requirements |= VirtualPythonEnv._populate_pip_requirements(dependency, suffix, actual_os, requirements_summary)
 
         # We need to make separate files because pip accepts either files containing hashes for all or none of the packages
         requirements_basic_txt = []
@@ -137,7 +147,7 @@ class VirtualPythonEnv:
 
 
     @staticmethod
-    def _populate_pip_requirements(conanfile, suffix, actual_os):
+    def _populate_pip_requirements(conanfile, suffix, actual_os, requirements_summary):
         pip_requirements = {}
         data_key = f"pip_requirements_{suffix}"
 
@@ -156,5 +166,6 @@ class VirtualPythonEnv:
                     if (actual_package_version is None or
                             (actual_package_version is not None and new_package_version is not None and new_package_version > actual_package_version)):
                         pip_requirements[package_name] = package_desc
+                        requirements_summary[package_name] = str(new_package_version) if new_package_version is not None else None
 
         return pip_requirements
