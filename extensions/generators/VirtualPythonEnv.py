@@ -151,7 +151,7 @@ class VirtualPythonEnv:
         pip_requirements = {}
         data_key = f"pip_requirements_{suffix}"
 
-        if hasattr(conanfile, "conan_data") and data_key in conanfile.conan_data:
+        if hasattr(conanfile, "conan_data") and conanfile.conan_data is not None and data_key in conanfile.conan_data:
             pip_requirements_data = conanfile.conan_data[data_key]
             for system in (system for system in pip_requirements_data if system in ("any_os", actual_os)):
                 for package_name, package_desc in pip_requirements_data[system].items():
