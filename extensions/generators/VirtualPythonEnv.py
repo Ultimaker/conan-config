@@ -153,7 +153,26 @@ class VirtualPythonEnv:
 
         if hasattr(conanfile, "conan_data") and conanfile.conan_data is not None and data_key in conanfile.conan_data:
             pip_requirements_data = conanfile.conan_data[data_key]
-            for system in (system for system in pip_requirements_data if system in ("any_os", actual_os)):
+            
+            # Build list of applicable system keys: any_os, OS name, and OS_architecture combinations
+            actual_arch = str(conanfile.settings.arch) if hasattr(conanfile.settings, "arch") else None
+            system_keys = ["any_os", actual_os]
+            
+            # Add architecture-specific keys (e.g., "Windows_x64", "Linux_x86_64")
+            if actual_arch:
+                # Map Conan architecture names to common naming conventions
+                arch_mapping = {
+                    "x86_64": "x64",
+                    "armv8": "arm64",
+                    "armv8_32": "arm",
+                }
+                normalized_arch = arch_mapping.get(actual_arch, actual_arch)
+                system_keys.append(f"{actual_os}_{normalized_arch}")
+                # Also try with original arch name
+                if normalized_arch != actual_arch:
+                    system_keys.append(f"{actual_os}_{actual_arch}")
+            
+            for system in (system for system in pip_requirements_data if system in system_keys):
                 for package_name, package_desc in pip_requirements_data[system].items():
 
                     try:
