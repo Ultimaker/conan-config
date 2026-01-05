@@ -46,3 +46,11 @@ dulcificum/*:shared=False
 dulcificum/*:shared=True
 {% endif %}
 clipper/*:shared=True
+{% if platform.system() == 'Windows' and platform.machine() in ['arm64', 'aarch64', 'ARM64'] %}
+# ARM64 Windows: CPython requires mpdecimal as shared library
+mpdecimal/*:shared=True
+# ARM64 Windows: Arcus needs to be shared for proper Python binding
+arcus/*:shared=True
+# ARM64 Windows: Disable tbbproxy (not available on ARM64 platforms)
+onetbb/*:tbbproxy=False
+{% endif %}
