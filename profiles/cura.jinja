@@ -53,10 +53,6 @@ hwloc/*:shared=True
 mpdecimal/*:shared=True
 # ARM64 Windows: Arcus needs to be shared for proper Python binding
 arcus/*:shared=True
-# boost as dependency of pagmo2 needs to be in header_only "False" and without_serialization "False" to build from source on ARM Windows
-# There is also the boost/1.88.0 in use but that one does not require any flags to be set
-boost/1.90.0:header_only=False
-boost/1.90.0:without_serialization=False
 # ARM64 Windows: Disable tbbproxy (not available on ARM64 platforms)
 onetbb/*:tbbproxy=False
 {% endif %}
