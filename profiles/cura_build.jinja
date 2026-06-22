@@ -10,7 +10,7 @@ tools.build:skip_test=True
 # FIXME: Once there is a msys2/cci.latest conan package for Widnows ARM, please remove this section.
 # https://github.com/msys2/msys2-installer
 # ONLY FOR ARM64 Windows: use locally-installed MSYS2 instead of msys2/cci.latest (x86_64-only)
-# Currently there is no conan package recipe with suuport for ARM64 Windows
+# Currently there is no conan package recipe with support for ARM64 Windows
 tools.microsoft.bash:subsystem=msys2
 tools.microsoft.bash:path={{ os.environ.get("MSYS2_BASH", "C:/msys64/usr/bin/bash.exe") }}
 {% endif %}
