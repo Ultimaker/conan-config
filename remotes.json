@@ -8,12 +8,12 @@
   },
   {
    "name": "cura-conan2",
-   "url": "https://ultimakercura.jfrog.io/artifactory/api/conan/cura-conan2-dev",
+   "url": "https://conan.ultimaker.com/api/packages/cura/conan",
    "verify_ssl": true
   },
   {
    "name": "cura-private-conan2",
-   "url": "https://ultimakercura.jfrog.io/artifactory/api/conan/cura-private-conan2-dev",
+   "url": "https://conan.ultimaker.com/api/packages/cura-private/conan",
    "verify_ssl": true,
    "disabled": true
   }
