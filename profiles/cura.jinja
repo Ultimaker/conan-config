@@ -11,8 +11,6 @@ umspatial*:compiler.cppstd=20
 dulcificum*:compiler.cppstd=20
 uvula*:compiler.cppstd=20
 curator/*:compiler.cppstd=20
-arcus*:compiler.cppstd=20
-pyarcus*:compiler.cppstd=20
 native_cad_plugin/*:compiler.cppstd=20
 
 [options]
@@ -23,11 +21,9 @@ grpc/*:objective_c_plugin=False
 grpc/*:php_plugin=False
 grpc/*:ruby_plugin=False
 grpc/*:python_plugin=False
-boost/*:header_only=True
 {% if platform.system() == 'Linux' %}
 openssl/*:shared=True
 {% endif %}
-pyarcus/*:shared=True
 pysavitar/*:shared=True
 pynest2d/*:shared=True
 cpython/*:shared=True
@@ -43,8 +39,6 @@ hwloc/*:shared=True
 {% if platform.system() == 'Windows' and os.environ.get('PROCESSOR_ARCHITECTURE', '').upper() == 'ARM64' %}
 # ARM64 Windows: CPython requires mpdecimal as shared library
 mpdecimal/*:shared=True
-# ARM64 Windows: Arcus needs to be shared for proper Python binding
-arcus/*:shared=True
 # ARM64 Windows: Disable tbbproxy (not available on ARM64 platforms)
 onetbb/*:tbbproxy=False
 {% endif %}
