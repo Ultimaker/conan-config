@@ -15,7 +15,7 @@
    "name": "cura-private-conan2",
    "url": "https://conan.ultimaker.com/api/packages/cura-private/conan",
    "verify_ssl": true,
-   "disabled": true
+   "disabled": false
   }
  ]
 }
