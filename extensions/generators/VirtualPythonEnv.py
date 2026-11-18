@@ -66,11 +66,6 @@ class VirtualPythonEnv:
         env.unset("PYTHONHOME")
         env_vars.save_script("virtual_python_env")
 
-        # Install some base packages
-        with env_vars.apply():
-            subprocess.run([py_interp_venv, "-m", "pip", "install", "--upgrade", "pip"], check=True)
-            subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"], check=True)
-
         requirements_summary = {}
 
         requirements_core = self._make_pip_requirements_files("core", requirements_summary)
@@ -79,14 +74,31 @@ class VirtualPythonEnv:
 
         self._export_requirements_summary(requirements_summary)
 
+        want_dev = self.conanfile.conf.get("user.generator.virtual_python_env:dev_tools", default=False, check_type=bool)
+        want_installer = self.conanfile.conf.get("user.generator.virtual_python_env:installer_tools", default=False, check_type=bool)
+        stamp_file = Path(venv_folder, ".pip_requirements_stamp.yml")
+        stamp_content = yaml.dump(
+            {"summary": requirements_summary, "dev_tools": want_dev, "installer_tools": want_installer},
+            default_flow_style=False,
+        )
+        if stamp_file.is_file() and stamp_file.read_text(encoding="utf-8") == stamp_content:
+            self.conanfile.output.info(f"VirtualPythonEnv pip requirements up-to-date in '{venv_folder}'; skipping pip install.")
+            return
+
+        # Install some base packages
+        with env_vars.apply():
+            subprocess.run([py_interp_venv, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+            subprocess.run([py_interp_venv, "-m", "pip", "install", "wheel", "setuptools"], check=True)
+
         self._install_pip_requirements(requirements_core, env_vars, py_interp_venv)
 
-        if self.conanfile.conf.get("user.generator.virtual_python_env:dev_tools", default=False, check_type=bool):
+        if want_dev:
             self._install_pip_requirements(requirements_dev, env_vars, py_interp_venv)
 
-        if self.conanfile.conf.get("user.generator.virtual_python_env:installer_tools", default=False,
-                                       check_type=bool):
+        if want_installer:
             self._install_pip_requirements(requirements_installer, env_vars, py_interp_venv)
+
+        stamp_file.write_text(stamp_content, encoding="utf-8")
 
     def _export_requirements_summary(self, requirements_summary):
         file_path = os.path.abspath("pip_requirements_summary.yml")
