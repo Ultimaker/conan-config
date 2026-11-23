@@ -1,0 +1,9 @@
+.git/*
+.github/*
+.agents/*
+.conanignore
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+README.md
+.gitignore
