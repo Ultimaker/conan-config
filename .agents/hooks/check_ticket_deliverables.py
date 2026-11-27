@@ -174,6 +174,26 @@ def check_ticket_specific_deliverables(ticket_ref: str, fix: bool = False) -> tu
     else:
         passed.append("All Obsidian Vault notes declare valid `access:` and `trl:` frontmatter")
 
+    arch_sync_script = REPO_ROOT / "scripts" / "check_architecture_sync.py"
+    if arch_sync_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(arch_sync_script), "--json"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            try:
+                import json
+
+                payload = json.loads(proc.stdout)
+                errors.extend(payload.get("errors", []))
+            except Exception:
+                errors.append(f"Architecture-sync check failed: {(proc.stdout + proc.stderr).strip()}")
+        else:
+            passed.append("Architecture-sync guardrail (C4 DSL, SVGs, README, and ADR links) passed")
+
     if access_label == "access:public":
         leak_hook = REPO_ROOT / ".agents" / "hooks" / "check_public_repo_ip_leak.py"
         if leak_hook.exists():
